@@ -6,6 +6,7 @@ import { Loader2Icon } from "lucide-react";
 import ConsoleLine from "@/components/server/console-line";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useWebSocketContext } from "@/contexts/websocket-context";
 import { usePersistedState } from "@/hooks/use-persisted-state";
 import { parseLog } from "@/lib/logs";
 import { orpc } from "@/lib/orpc";
@@ -33,15 +34,29 @@ const ServerConsole = ({ server }: { server: Server }) => {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 0 });
   const [isProcessingInitial, setIsProcessingInitial] = useState(true);
-
+  const [websocketLogs, setWebsocketLogs] = useState<LogLine[]>([]);
+  const [backgroundProcessed, setBackgroundProcessed] = useState<Set<number>>(
+    new Set()
+  );
+  const [initialProcessed, setInitialProcessed] = useState<Set<number>>(
+    new Set()
+  );
+  const [lastKnownStatus, setLastKnownStatus] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  const { sendMessage, isConnected, subscribe } = useWebSocketContext();
+
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
 
     const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 50;
+    const isAtBottom = Math.abs(scrollTop + clientHeight - scrollHeight) <= 5;
     setAutoScroll(isAtBottom);
   }, []);
 
@@ -66,6 +81,15 @@ const ServerConsole = ({ server }: { server: Server }) => {
     if (e.key === "Enter" && command.length > 0) {
       setHistory((prevHistory) => [command, ...prevHistory!].slice(0, 32));
       setHistoryIndex(-1);
+
+      // Send command via WebSocket if connected
+      if (isConnected) {
+        sendMessage({
+          type: "server-command",
+          command: command,
+          id: crypto.randomUUID(),
+        });
+      }
 
       e.currentTarget.value = "";
       e.currentTarget.focus();
@@ -98,83 +122,209 @@ const ServerConsole = ({ server }: { server: Server }) => {
     return result;
   }, [logsFetched?.logs]);
 
+  const totalLogsCount = processedLogs.length + websocketLogs.length;
+
   const updateVisibleRange = useCallback(() => {
-    if (!containerRef.current || processedLogs.length === 0) return;
+    if (!containerRef.current || totalLogsCount === 0) return;
 
     const container = containerRef.current;
     const { scrollTop, clientHeight } = container;
 
     const estimatedItemHeight = 20;
-    const buffer = 100;
+    const buffer = 35;
 
     const startIndex = Math.max(
       0,
       Math.floor(scrollTop / estimatedItemHeight) - buffer
     );
     const endIndex = Math.min(
-      processedLogs.length,
+      totalLogsCount,
       Math.ceil((scrollTop + clientHeight) / estimatedItemHeight) + buffer
     );
 
     setVisibleRange({ start: startIndex, end: endIndex });
-  }, [processedLogs.length]);
+  }, [totalLogsCount]);
 
   const handleScrollWithRange = useCallback(() => {
     handleScroll();
     updateVisibleRange();
   }, [handleScroll, updateVisibleRange]);
 
-  const status = server.serverInfo?.status ?? "UNKNOWN";
+  const status = lastKnownStatus ?? server.serverInfo?.status ?? "UNKNOWN";
   const isRunning = status === "RUNNING";
 
+  // Initialize lastKnownStatus with current server status
   useEffect(() => {
-    if (processedLogs.length > 0) {
+    if (lastKnownStatus === null && status !== "UNKNOWN") {
+      setLastKnownStatus(status);
+    }
+  }, [status, lastKnownStatus]);
+
+  // Subscribe to WebSocket log messages (client-side only)
+  useEffect(() => {
+    if (!isClient) return;
+
+    const unsubscribe = subscribe((message) => {
+      console.log(
+        "[CONSOLE] All WebSocket messages:",
+        message.type,
+        message.serverId,
+        "Expected serverId:",
+        server.serverId
+      );
+      if (message.type === "log" && message.serverId === server.serverId) {
+        console.log("[CONSOLE] Log message received:", message.message);
+        const rawLogLine = message.message;
+        if (typeof rawLogLine === "string" && rawLogLine.trim()) {
+          console.log("[CONSOLE] Processing log:", rawLogLine);
+          const cleanLog = removeAnsiCodes(rawLogLine);
+          const parsedLog = parseLog(cleanLog, null);
+
+          if (parsedLog) {
+            console.log("[CONSOLE] Parsed log successfully:", parsedLog);
+            setWebsocketLogs((prevLogs) => {
+              const newLogs = [...prevLogs, parsedLog];
+
+              // Trigger scroll update for new WebSocket logs
+              setTimeout(() => {
+                if (autoScroll && containerRef.current) {
+                  const container = containerRef.current;
+                  container.style.scrollBehavior = "auto";
+                  container.scrollTop = container.scrollHeight;
+                }
+              }, 0);
+
+              return newLogs;
+            });
+          } else {
+            console.log("[CONSOLE] Failed to parse log:", cleanLog);
+          }
+        } else {
+          console.log("[CONSOLE] Invalid log message:", rawLogLine);
+        }
+      } else if (
+        message.type === "status-update" &&
+        message.serverId === server.serverId
+      ) {
+        const newStatus = message.data?.status;
+        if (newStatus && newStatus !== lastKnownStatus) {
+          setLastKnownStatus(newStatus);
+
+          // Create status change log entry
+          const statusMessage = `Server is now ${newStatus.toLowerCase()}`;
+          const statusLog: LogLine = {
+            rawTimestamp: null,
+            timestamp: new Date(),
+            logType: "status",
+            message: statusMessage,
+            id: `status-${Date.now()}`,
+          };
+
+          setWebsocketLogs((prevLogs) => {
+            const newLogs = [...prevLogs, statusLog];
+
+            // Trigger scroll update for status change
+            setTimeout(() => {
+              if (autoScroll && containerRef.current) {
+                const container = containerRef.current;
+                container.style.scrollBehavior = "auto";
+                container.scrollTop = container.scrollHeight;
+              }
+            }, 0);
+
+            return newLogs;
+          });
+        }
+      }
+    });
+
+    return unsubscribe;
+  }, [isClient, subscribe, server.serverId, autoScroll, lastKnownStatus]);
+
+  // Background processing for remaining logs (not in initial 50)
+  useEffect(() => {
+    if (totalLogsCount === 0 || isProcessingInitial) return;
+
+    const processBackground = () => {
+      const newest35Start = Math.max(0, totalLogsCount - 35);
+
+      // Find logs that aren't in the initial 35 and need background processing
+      const toProcess: number[] = [];
+
+      for (let i = 0; i < newest35Start; i++) {
+        if (!backgroundProcessed.has(i)) {
+          toProcess.push(i);
+        }
+      }
+
+      // Process a few at a time to avoid blocking
+      const batchSize = 10;
+      const batch = toProcess.slice(0, batchSize);
+
+      if (batch.length > 0) {
+        setBackgroundProcessed((prev) => {
+          const newSet = new Set(prev);
+          batch.forEach((index) => newSet.add(index));
+          return newSet;
+        });
+
+        // Continue processing more batches
+        if (toProcess.length > batchSize) {
+          setTimeout(processBackground, 16); // ~60fps
+        }
+      }
+    };
+
+    // Use requestIdleCallback if available, otherwise setTimeout
+    if (typeof requestIdleCallback !== "undefined") {
+      requestIdleCallback(processBackground);
+    } else {
+      setTimeout(processBackground, 0);
+    }
+  }, [totalLogsCount, isProcessingInitial, backgroundProcessed]);
+
+  // Process initial 50 newest messages while loader is showing
+  useEffect(() => {
+    if (totalLogsCount > 0) {
       updateVisibleRange();
 
+      // Process the newest 35 messages first
+      const newest35Start = Math.max(0, totalLogsCount - 35);
+      const newInitialProcessed = new Set<number>();
+
+      for (let i = newest35Start; i < totalLogsCount; i++) {
+        newInitialProcessed.add(i);
+      }
+
+      setInitialProcessed(newInitialProcessed);
       setIsProcessingInitial(false);
-    } else {
-      setIsProcessingInitial(true);
+    } else if (!isLoading) {
+      // Only set processing to false if we're not loading (so we show "No logs available")
+      setIsProcessingInitial(false);
     }
-  }, [processedLogs.length, updateVisibleRange]);
+  }, [totalLogsCount, updateVisibleRange, isLoading]);
+
+  // Scroll to bottom when processing finishes
+  useEffect(() => {
+    if (!isProcessingInitial && autoScroll && containerRef.current) {
+      const container = containerRef.current;
+      container.style.scrollBehavior = "auto";
+      container.scrollTop = container.scrollHeight;
+    }
+  }, [isProcessingInitial, autoScroll]);
 
   useEffect(() => {
     if (
-      !isProcessingInitial &&
       autoScroll &&
       containerRef.current &&
-      processedLogs.length > 0
+      totalLogsCount > 0 &&
+      !isProcessingInitial
     ) {
       const container = containerRef.current;
       container.style.scrollBehavior = "auto";
       container.scrollTop = container.scrollHeight;
-
-      updateVisibleRange();
     }
-  }, [
-    isProcessingInitial,
-    autoScroll,
-    processedLogs.length,
-    updateVisibleRange,
-  ]);
-
-  useEffect(() => {
-    if (
-      autoScroll &&
-      containerRef.current &&
-      processedLogs.length > 0 &&
-      !isProcessingInitial
-    ) {
-      const container = containerRef.current;
-      const shouldScroll =
-        container.scrollTop + container.clientHeight >=
-        container.scrollHeight - 50;
-
-      if (shouldScroll) {
-        container.style.scrollBehavior = "auto";
-        container.scrollTop = container.scrollHeight;
-      }
-    }
-  }, [processedLogs.length, autoScroll, isProcessingInitial]);
+  }, [totalLogsCount, autoScroll, isProcessingInitial]);
 
   return (
     <Card className="py-0">
@@ -212,70 +362,83 @@ const ServerConsole = ({ server }: { server: Server }) => {
             `,
             }}
           />
-          <div
-            className={`absolute inset-0 flex items-center justify-center transition-opacity duration-200 ${isLoading || isProcessingInitial ? "opacity-100" : "pointer-events-none opacity-0"}`}
-          >
-            <Loader2Icon className="text-muted-foreground h-8 w-8 animate-spin" />
-          </div>
+          {isLoading || isProcessingInitial ? (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Loader2Icon className="text-muted-foreground h-8 w-8 animate-spin" />
+            </div>
+          ) : totalLogsCount === 0 ? (
+            <div className="text-muted-foreground flex h-full items-center justify-center">
+              <p>No logs available</p>
+            </div>
+          ) : (
+            <div className="space-y-0">
+              {processedLogs.map((log, index) => {
+                const isInViewport =
+                  index >= visibleRange.start && index < visibleRange.end;
+                const isInitialProcessed = initialProcessed.has(index);
+                const isBackgroundProcessed = backgroundProcessed.has(index);
+                const shouldShowProcessed =
+                  isInViewport || isInitialProcessed || isBackgroundProcessed;
 
-          <div
-            className={`transition-opacity duration-200 ${isLoading || isProcessingInitial ? "opacity-0" : "opacity-100"}`}
-          >
-            {processedLogs.length === 0 ? (
-              <div className="text-muted-foreground flex h-full items-center justify-center">
-                <p>No logs available</p>
-              </div>
-            ) : (
-              <div className="space-y-0">
-                {processedLogs.map((log, index) => {
-                  const isVisible =
-                    index >= visibleRange.start && index < visibleRange.end;
+                if (shouldShowProcessed) {
+                  return (
+                    <div
+                      key={`http-${index}`}
+                      ref={(el) => {
+                        itemRefs.current[index] = el;
+                      }}
+                    >
+                      <ConsoleLine line={log} />
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div
+                      key={`http-${index}`}
+                      ref={(el) => {
+                        itemRefs.current[index] = el;
+                      }}
+                      className="whitespace-pre-wrap text-gray-400"
+                      style={{ minHeight: "20px" }}
+                    >
+                      {log.message}
+                    </div>
+                  );
+                }
+              })}
+              {websocketLogs.map((log, index) => {
+                const globalIndex = processedLogs.length + index;
 
-                  if (isVisible) {
-                    return (
-                      <div
-                        key={index}
-                        ref={(el) => {
-                          itemRefs.current[index] = el;
-                        }}
-                      >
-                        <ConsoleLine line={log} />
-                      </div>
-                    );
-                  } else {
-                    return (
-                      <div
-                        key={index}
-                        ref={(el) => {
-                          itemRefs.current[index] = el;
-                        }}
-                        className="whitespace-pre-wrap text-gray-400"
-                        style={{ minHeight: "20px" }}
-                      >
-                        {log.message}
-                      </div>
-                    );
-                  }
-                })}
-              </div>
-            )}
-          </div>
+                return (
+                  <div
+                    key={`ws-${index}`}
+                    ref={(el) => {
+                      itemRefs.current[globalIndex] = el;
+                    }}
+                  >
+                    <ConsoleLine line={log} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="px-3 pt-1 pb-3 sm:px-4 sm:pt-1 sm:pb-4">
           <div className="flex">
             <Input
               onKeyDown={handleCommandKeyDown}
-              placeholder="Enter server command..."
+              placeholder={
+                !isConnected
+                  ? "Connecting to server..."
+                  : !isRunning
+                    ? "Server must be running to send commands"
+                    : "Enter server command..."
+              }
               className="bg-background h-12 text-sm sm:h-10 sm:text-base"
-              disabled={!isRunning || isLoading}
+              disabled={!isRunning || isLoading || !isConnected}
             />
           </div>
-          {!isRunning && (
-            <p className="text-muted-foreground mt-2 text-xs">
-              Server must be running to send commands
-            </p>
-          )}
         </div>
       </CardContent>
     </Card>

@@ -3,18 +3,17 @@ import { toast } from "sonner";
 
 import { orpc } from "@/lib/orpc";
 
-export const useServerCommandMutation = (
+export const useRestartServerMutation = (
   serverId: string,
   onSuccess?: () => void
 ) => {
   return useMutation(
-    orpc.atlas.executeServerCommand.mutationOptions({
+    orpc.atlas.restartServer.mutationOptions({
       onSuccess: () => {
-        toast.success("Command executed successfully");
         onSuccess?.();
       },
       onError: (error) => {
-        toast.error(`Failed to execute command: ${error.message}`);
+        toast.error(`Failed to restart server: ${error.message}`);
       },
     })
   );

@@ -28,6 +28,7 @@ const badgeVariants = cva(
         green:
           "border-transparent select-none items-center whitespace-nowrap font-medium bg-emerald-500/15 text-emerald-500 text-xs h-4 px-1 py-1 rounded-md",
         blue: "border-transparent select-none items-center whitespace-nowrap font-medium bg-blue-500/15 text-blue-500 text-xs h-4 px-1 py-1 rounded-md",
+        purple: "border-transparent select-none items-center whitespace-nowrap font-medium bg-purple-500/15 text-purple-500 text-xs h-4 px-1 py-1 rounded-md",
         primary:
           "border-transparent bg-primary text-primary-foreground [a&]:hover:bg-primary/90 focus-visible:ring-primary/20 dark:focus-visible:ring-primary/40 dark:bg-primary/60",
       },

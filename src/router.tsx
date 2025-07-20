@@ -17,8 +17,8 @@ export function createRouter() {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 1000 * 60 * 5,
-        gcTime: 1000 * 60 * 15,
+        staleTime: 1000 * 60,
+        gcTime: 1000 * 60,
         retry: 1,
         refetchOnWindowFocus: false,
       },

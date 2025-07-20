@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { type ReactNode, createContext, useContext, useState } from "react";
 
 export interface UploadProgress {
   id: string;
@@ -13,9 +13,9 @@ export interface UploadProgress {
 
 interface UploadProgressContextType {
   uploads: UploadProgress[];
-  addUpload: (upload: Omit<UploadProgress, "id" | "startTime">) => string;
-  updateUpload: (id: string, updates: Partial<UploadProgress>) => void;
-  removeUpload: (id: string) => void;
+  addUpload: (_upload: Omit<UploadProgress, "id" | "startTime">) => string;
+  updateUpload: (_id: string, _updates: Partial<UploadProgress>) => void;
+  removeUpload: (_id: string) => void;
   clearCompleted: () => void;
 }
 
@@ -33,7 +33,7 @@ export function UploadProgressProvider({ children }: { children: ReactNode }) {
       id,
       startTime: Date.now(),
     };
-    
+
     setUploads((prev) => [...prev, newUpload]);
     return id;
   };

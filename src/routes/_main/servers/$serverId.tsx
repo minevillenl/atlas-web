@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -16,9 +16,16 @@ import {
   UsersIcon,
 } from "lucide-react";
 
+import ConnectionWarning from "@/components/connection-warning";
 import { getStatus } from "@/components/server-card";
 import { Button } from "@/components/ui/button";
-import { WebSocketProvider, useWebSocketContext } from "@/contexts/websocket-context";
+import {
+  WebSocketProvider,
+  useWebSocketContext,
+} from "@/contexts/websocket-context";
+import { useRestartServerMutation } from "@/hooks/mutations/use-restart-server-migration";
+import { useStartServerMutation } from "@/hooks/mutations/use-start-server-migration";
+import { useStopServerMutation } from "@/hooks/mutations/use-stop-server-migration";
 import { orpc } from "@/lib/orpc";
 import { seo } from "@/utils/seo";
 
@@ -43,7 +50,7 @@ const links = [
 const ServerContent = () => {
   const { serverId } = Route.useParams();
   const [realtimeServerInfo, setRealtimeServerInfo] = useState<any>(null);
-  const { sendMessage, isConnected, subscribe } = useWebSocketContext();
+  const { subscribe } = useWebSocketContext();
 
   const { data: server } = useQuery({
     ...orpc.atlas.getServer.queryOptions({
@@ -51,36 +58,26 @@ const ServerContent = () => {
     }),
   });
 
-  // Subscribe to WebSocket messages
+  const startServerMutation = useStartServerMutation(serverId);
+  const stopServerMutation = useStopServerMutation(serverId);
+  const restartServerMutation = useRestartServerMutation(serverId);
+  // Subscribe to WebSocket messages (ignore log messages - handled by console)
   useEffect(() => {
     const unsubscribe = subscribe((message) => {
-      if (message.type === "server-info") {
-        setRealtimeServerInfo(message.data);
-      } else if (message.type === "status-update") {
+      if (message.type === "status-update") {
         setRealtimeServerInfo((prev: any) => ({
           ...prev,
           status: message.data.status,
           serverId: message.data.serverId,
         }));
+      } else if (message.type === "server-info") {
+        setRealtimeServerInfo(message.data);
       }
+      // Ignore log messages - they're handled by the console component
     });
 
     return unsubscribe;
   }, [subscribe]);
-
-  // Subscribe to status updates when connected
-  useEffect(() => {
-    if (isConnected) {
-      // Add a small delay to ensure WebSocket is fully ready
-      setTimeout(() => {
-        sendMessage({
-          type: "subscribe",
-          streams: ["status"],
-          targets: [serverId],
-        });
-      }, 100);
-    }
-  }, [isConnected, sendMessage, serverId]);
 
   if (!server) {
     return <div>Loading...</div>;
@@ -88,7 +85,6 @@ const ServerContent = () => {
 
   const currentStatus =
     realtimeServerInfo?.status ?? server.serverInfo?.status ?? "UNKNOWN";
-  const isRunning = currentStatus === "RUNNING";
   const isStopped = currentStatus === "STOPPED";
 
   return (
@@ -110,7 +106,8 @@ const ServerContent = () => {
           <Button
             size="sm"
             variant="ghost"
-            disabled={isRunning}
+            disabled={!isStopped || startServerMutation.isPending}
+            onClick={() => startServerMutation.mutate({ server: serverId })}
             className="h-[38px] w-[64px] rounded-md border border-green-500 bg-green-600 text-white hover:!bg-green-700 disabled:opacity-50"
           >
             <PlayCircleIcon size={20} />
@@ -118,15 +115,17 @@ const ServerContent = () => {
           <Button
             size="sm"
             variant="ghost"
-            disabled={isStopped}
             className="h-[38px] w-[64px] rounded-md border border-neutral-500 bg-neutral-700 text-white hover:!bg-neutral-600 disabled:opacity-50"
+            onClick={() => restartServerMutation.mutate({ server: serverId })}
+            disabled={isStopped || restartServerMutation.isPending}
           >
             <RefreshCcwIcon size={20} />
           </Button>
           <Button
             size="sm"
             variant="ghost"
-            disabled={isStopped}
+            disabled={isStopped || stopServerMutation.isPending}
+            onClick={() => stopServerMutation.mutate({ server: serverId })}
             className="h-[38px] w-[64px] rounded-md border border-red-600 bg-red-800 text-white hover:!bg-red-900 disabled:opacity-50"
           >
             <CircleStopIcon size={20} />
@@ -156,6 +155,7 @@ const ServerContent = () => {
       </div>
 
       <Outlet />
+      <ConnectionWarning serverStatus={currentStatus} />
     </div>
   );
 };

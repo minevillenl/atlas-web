@@ -41,7 +41,9 @@ const ConsoleLine = React.memo(({
                 ? "bg-yellow-500/60 sm:bg-yellow-500/40"
                 : type === "info"
                   ? "bg-blue-600/60 sm:bg-blue-600/40"
-                  : "bg-green-500/60 sm:bg-green-500/40"
+                  : type === "status"
+                    ? "bg-purple-500/60 sm:bg-purple-500/40"
+                    : "bg-green-500/60 sm:bg-green-500/40"
         )}
       />
     );
@@ -74,7 +76,9 @@ const ConsoleLine = React.memo(({
             ? "bg-yellow-500/10 hover:bg-yellow-500/15"
             : type === "debug"
               ? "bg-orange-500/10 hover:bg-orange-500/15"
-              : "hover:bg-gray-200/50 dark:hover:bg-gray-800/50"
+              : type === "status"
+                ? "bg-purple-500/10 hover:bg-purple-500/15"
+                : "hover:bg-gray-200/50 dark:hover:bg-gray-800/50"
       )}
     >
       {/* Mobile: Simple colored bar */}
@@ -89,7 +93,9 @@ const ConsoleLine = React.memo(({
                 ? "bg-yellow-500"
                 : type === "info"
                   ? "bg-blue-600"
-                  : "bg-green-500"
+                  : type === "status"
+                    ? "bg-purple-500"
+                    : "bg-green-500"
         )}
       />
 

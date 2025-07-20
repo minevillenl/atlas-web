@@ -26,6 +26,11 @@ export const LOG_STYLES: Record<LogType, LogStyle> = {
     variant: "blue",
     color: "bg-blue-600/40",
   },
+  status: {
+    type: "status",
+    variant: "purple",
+    color: "bg-purple-500/40",
+  },
 } as const;
 
 export function parseLog(
@@ -84,6 +89,11 @@ export const getLogType = (
   message: string,
   oldType: string | null
 ): LogStyle => {
+  // If explicitly set to "status", always use status style
+  if (oldType === "status") {
+    return LOG_STYLES.status;
+  }
+  
   const lowerMessage = message.toLowerCase();
 
   if (

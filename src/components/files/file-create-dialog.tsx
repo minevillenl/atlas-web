@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 
 interface FileCreateDialogProps {
   onCreateFile: () => void;
-  onCreateFolder: (folderName: string) => void;
+  onCreateFolder: (_folderName: string) => void;
 }
 
 export interface FileCreateDialogRef {
@@ -67,7 +67,9 @@ export const FileCreateDialog = forwardRef<
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create {type === "file" ? "File" : "Folder"}</DialogTitle>
+          <DialogTitle>
+            Create {type === "file" ? "File" : "Folder"}
+          </DialogTitle>
           <DialogDescription>
             Enter a name for the new {type === "file" ? "file" : "folder"}.
           </DialogDescription>
@@ -96,7 +98,10 @@ export const FileCreateDialog = forwardRef<
           <Button variant="outline" onClick={closeDialog}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={type === "folder" && !name.trim()}>
+          <Button
+            onClick={handleConfirm}
+            disabled={type === "folder" && !name.trim()}
+          >
             {type === "file" ? "Create File" : "Create Folder"}
           </Button>
         </DialogFooter>

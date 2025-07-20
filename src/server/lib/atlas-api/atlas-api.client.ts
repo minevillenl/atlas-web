@@ -174,6 +174,16 @@ export class AtlasApiClient {
     );
   }
 
+  async restartServer(id: string): Promise<ApiResponse<Server>> {
+    return this.request(
+      `/api/v1/servers/${id}/restart`,
+      {
+        method: "POST",
+      },
+      ApiResponseSchema(ServerSchema)
+    );
+  }
+
   async executeServerCommand(
     id: string,
     command: ServerCommand
@@ -553,6 +563,7 @@ const atlas = {
   deleteServer: (id: string) => getAtlasClient().deleteServer(id),
   startServer: (id: string) => getAtlasClient().startServer(id),
   stopServer: (id: string) => getAtlasClient().stopServer(id),
+  restartServer: (id: string) => getAtlasClient().restartServer(id),
   executeServerCommand: (id: string, command: ServerCommand) =>
     getAtlasClient().executeServerCommand(id, command),
   getGroups: () => getAtlasClient().getGroups(),

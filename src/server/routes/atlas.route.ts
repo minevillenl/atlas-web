@@ -2,9 +2,9 @@ import { ORPCError, os } from "@orpc/server";
 import { getWebRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 
+import { env } from "@/env";
 import atlas from "@/server/lib/atlas-api/atlas-api.client";
 import { auth } from "@/server/lib/auth";
-import { env } from "@/env";
 
 const serverListInputSchema = z.object({
   group: z.string().optional(),
@@ -156,6 +156,54 @@ const utilization = os.handler(async () => {
   const utilization = await atlas.getUtilization();
   return utilization.data;
 });
+
+const startServer = os
+  .input(z.object({ server: z.string() }))
+  .handler(async ({ input }) => {
+    const request = getWebRequest();
+    const session = await auth.api.getSession({
+      headers: request?.headers ?? new Headers(),
+    });
+
+    if (!session) {
+      throw new ORPCError("UNAUTHORIZED", { message: "Unauthorized" });
+    }
+
+    const result = await atlas.startServer(input.server);
+    return result.data;
+  });
+
+const stopServer = os
+  .input(z.object({ server: z.string() }))
+  .handler(async ({ input }) => {
+    const request = getWebRequest();
+    const session = await auth.api.getSession({
+      headers: request?.headers ?? new Headers(),
+    });
+
+    if (!session) {
+      throw new ORPCError("UNAUTHORIZED", { message: "Unauthorized" });
+    }
+
+    const result = await atlas.stopServer(input.server);
+    return result.data;
+  });
+
+const restartServer = os
+  .input(z.object({ server: z.string() }))
+  .handler(async ({ input }) => {
+    const request = getWebRequest();
+    const session = await auth.api.getSession({
+      headers: request?.headers ?? new Headers(),
+    });
+
+    if (!session) {
+      throw new ORPCError("UNAUTHORIZED", { message: "Unauthorized" });
+    }
+
+    const result = await atlas.restartServer(input.server);
+    return result.data;
+  });
 
 const getServerFiles = os
   .input(z.object({ server: z.string(), path: z.string().optional() }))
@@ -362,7 +410,9 @@ const getWebSocketToken = os
     const tokenResponse = await atlas.generateWebSocketToken(input.server);
 
     if (!tokenResponse.data) {
-      throw new ORPCError("INTERNAL_ERROR", { message: "Failed to generate WebSocket token" });
+      throw new ORPCError("INTERNAL_ERROR", {
+        message: "Failed to generate WebSocket token",
+      });
     }
 
     return {
@@ -382,6 +432,9 @@ export default {
   utilization,
   getServerLogs,
   scale,
+  startServer,
+  stopServer,
+  restartServer,
   getServerFiles,
   getServerFileContents,
   writeServerFileContents,

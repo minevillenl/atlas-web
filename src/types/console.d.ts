@@ -1,10 +1,11 @@
-export type LogType = "error" | "warning" | "success" | "info" | "debug";
+export type LogType = "error" | "warning" | "success" | "info" | "debug" | "status";
 export type LogVariant =
   | "red"
   | "yellow"
   | "green"
   | "blue"
   | "orange"
+  | "purple"
   | "primary";
 
 export type LogLine = {

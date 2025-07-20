@@ -56,40 +56,26 @@ const RouteComponent = () => {
     }),
   });
 
-  const { sendMessage, isConnected, subscribe } = useWebSocketContext();
+  const { subscribe } = useWebSocketContext();
 
   // Subscribe to WebSocket messages
   useEffect(() => {
     const unsubscribe = subscribe((message) => {
-      if (message.type === "stats") {
-        setRealtimeStats(message.data);
-      } else if (message.type === "server-info") {
-        setRealtimeServerInfo(message.data);
-      } else if (message.type === "status-update") {
+      if (message.type === "status-update") {
         setRealtimeServerInfo((prev: any) => ({
           ...prev,
           status: message.data.status,
           serverId: message.data.serverId,
         }));
+      } else if (message.type === "stats") {
+        setRealtimeStats(message.data);
+      } else if (message.type === "server-info") {
+        setRealtimeServerInfo(message.data);
       }
     });
 
     return unsubscribe;
   }, [subscribe]);
-
-  // Subscribe to real-time data when connected
-  useEffect(() => {
-    if (isConnected) {
-      // Add a small delay to ensure WebSocket is fully ready
-      setTimeout(() => {
-        sendMessage({
-          type: "subscribe",
-          streams: ["stats"],
-          targets: [serverId],
-        });
-      }, 100);
-    }
-  }, [isConnected, sendMessage, serverId]);
 
   // Use real-time stats if available, otherwise fallback to server data
   const currentStatus =
@@ -164,9 +150,7 @@ const RouteComponent = () => {
               <p className="text-base font-semibold sm:text-lg">
                 {formatBytes(currentStats.ram.used)}
               </p>
-              <p className="text-muted-foreground text-xs sm:text-sm">
-                Memory ({currentStats.ram.percentage.toFixed(1)}%)
-              </p>
+              <p className="text-muted-foreground text-xs sm:text-sm">Memory</p>
               <p className="text-muted-foreground text-[10px] sm:text-xs">
                 / {formatBytes(currentStats.ram.total)}
               </p>
@@ -230,16 +214,5 @@ const RouteComponent = () => {
 };
 
 export const Route = createFileRoute("/_main/servers/$serverId/")({
-  loader: async ({ context, params }) => {
-    const logs = await context.queryClient.ensureQueryData(
-      orpc.atlas.getServerLogs.queryOptions({
-        input: {
-          server: params.serverId,
-        },
-      })
-    );
-
-    return { logs };
-  },
   component: RouteComponent,
 });

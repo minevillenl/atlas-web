@@ -20,7 +20,7 @@ interface FileMoveDialogProps {
 }
 
 export interface FileMoveDialogRef {
-  openDialog: (file: FileItem) => void;
+  openDialog: (_file: FileItem) => void;
 }
 
 export const FileMoveDialog = forwardRef<
@@ -36,9 +36,7 @@ export const FileMoveDialog = forwardRef<
   const openDialog = (file: FileItem) => {
     setFileToMove(file);
     const currentFilePath =
-      currentPath === "/"
-        ? `/${file.name}`
-        : `${currentPath}/${file.name}`;
+      currentPath === "/" ? `/${file.name}` : `${currentPath}/${file.name}`;
     setNewFolderPath(currentFilePath);
     setOpen(true);
   };
@@ -58,7 +56,7 @@ export const FileMoveDialog = forwardRef<
         : `${currentPath}/${fileToMove.name}`;
 
     let newPath = newFolderPath.trim();
-    
+
     // Handle relative paths
     if (!newPath.startsWith("/")) {
       // If it's a relative path, resolve it relative to current directory
