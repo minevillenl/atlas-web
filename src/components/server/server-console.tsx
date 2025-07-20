@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useQuery } from "@tanstack/react-query";
 import { Loader2Icon } from "lucide-react";
@@ -31,16 +31,19 @@ const ServerConsole = ({ server }: { server: Server }) => {
     []
   );
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 0 });
+  const [isProcessingInitial, setIsProcessingInitial] = useState(true);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  const handleScroll = () => {
+  const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
 
     const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
     const isAtBottom = scrollTop + clientHeight >= scrollHeight - 50;
     setAutoScroll(isAtBottom);
-  };
+  }, []);
 
   const handleCommandKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "ArrowUp") {
@@ -95,50 +98,83 @@ const ServerConsole = ({ server }: { server: Server }) => {
     return result;
   }, [logsFetched?.logs]);
 
+  const updateVisibleRange = useCallback(() => {
+    if (!containerRef.current || processedLogs.length === 0) return;
+
+    const container = containerRef.current;
+    const { scrollTop, clientHeight } = container;
+
+    const estimatedItemHeight = 20;
+    const buffer = 100;
+
+    const startIndex = Math.max(
+      0,
+      Math.floor(scrollTop / estimatedItemHeight) - buffer
+    );
+    const endIndex = Math.min(
+      processedLogs.length,
+      Math.ceil((scrollTop + clientHeight) / estimatedItemHeight) + buffer
+    );
+
+    setVisibleRange({ start: startIndex, end: endIndex });
+  }, [processedLogs.length]);
+
+  const handleScrollWithRange = useCallback(() => {
+    handleScroll();
+    updateVisibleRange();
+  }, [handleScroll, updateVisibleRange]);
+
   const status = server.serverInfo?.status ?? "UNKNOWN";
   const isRunning = status === "RUNNING";
 
-  const [showContent, setShowContent] = useState(false);
-  const [visibleLogCount, setVisibleLogCount] = useState(0);
-
   useEffect(() => {
-    if (!isLoading && processedLogs.length > 0) {
-      setVisibleLogCount(0);
-      setShowContent(false);
+    if (processedLogs.length > 0) {
+      updateVisibleRange();
 
-      const renderBatch = (startIndex: number) => {
-        const batchSize = 20;
-        const nextIndex = Math.min(
-          startIndex + batchSize,
-          processedLogs.length
-        );
-        setVisibleLogCount(nextIndex);
-
-        if (nextIndex < processedLogs.length) {
-          setTimeout(() => renderBatch(nextIndex), 8);
-        } else {
-          setShowContent(true);
-        }
-      };
-
-      setTimeout(() => renderBatch(0), 50);
+      setIsProcessingInitial(false);
     } else {
-      setShowContent(false);
-      setVisibleLogCount(0);
+      setIsProcessingInitial(true);
     }
-  }, [isLoading, processedLogs.length]);
+  }, [processedLogs.length, updateVisibleRange]);
 
   useEffect(() => {
-    if (autoScroll && containerRef.current && visibleLogCount > 0) {
-      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    if (
+      !isProcessingInitial &&
+      autoScroll &&
+      containerRef.current &&
+      processedLogs.length > 0
+    ) {
+      const container = containerRef.current;
+      container.style.scrollBehavior = "auto";
+      container.scrollTop = container.scrollHeight;
+
+      updateVisibleRange();
     }
-  }, [visibleLogCount, autoScroll]);
+  }, [
+    isProcessingInitial,
+    autoScroll,
+    processedLogs.length,
+    updateVisibleRange,
+  ]);
 
   useEffect(() => {
-    if (autoScroll && containerRef.current && processedLogs.length > 0) {
-      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    if (
+      autoScroll &&
+      containerRef.current &&
+      processedLogs.length > 0 &&
+      !isProcessingInitial
+    ) {
+      const container = containerRef.current;
+      const shouldScroll =
+        container.scrollTop + container.clientHeight >=
+        container.scrollHeight - 50;
+
+      if (shouldScroll) {
+        container.style.scrollBehavior = "auto";
+        container.scrollTop = container.scrollHeight;
+      }
     }
-  }, [processedLogs.length, autoScroll]);
+  }, [processedLogs.length, autoScroll, isProcessingInitial]);
 
   return (
     <Card className="py-0">
@@ -149,18 +185,19 @@ const ServerConsole = ({ server }: { server: Server }) => {
             "console-container relative h-[300px] overflow-x-hidden overflow-y-auto rounded-md p-3 pb-2 font-mono text-xs sm:h-[400px] sm:p-6 sm:pb-4 lg:h-[508px]"
           }
           style={{
-            scrollbarWidth: showContent ? "thin" : "none",
-            msOverflowStyle: showContent ? "auto" : "none",
+            scrollbarWidth: isLoading || isProcessingInitial ? "none" : "thin",
+            msOverflowStyle: isLoading || isProcessingInitial ? "none" : "auto",
+            scrollBehavior: "auto",
           }}
-          onScroll={handleScroll}
+          onScroll={handleScrollWithRange}
         >
           <style
             dangerouslySetInnerHTML={{
               __html: `
               .console-container::-webkit-scrollbar {
-                width: 8px;
-                opacity: ${showContent ? "1" : "0"};
-                transition: opacity 300ms ease;
+                width: ${isLoading || isProcessingInitial ? "0px" : "8px"};
+                opacity: ${isLoading || isProcessingInitial ? "0" : "1"};
+                transition: opacity 200ms ease;
               }
               .console-container::-webkit-scrollbar-track {
                 background: transparent;
@@ -176,25 +213,53 @@ const ServerConsole = ({ server }: { server: Server }) => {
             }}
           />
           <div
-            className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${isLoading || !showContent ? "opacity-100" : "opacity-0"}`}
+            className={`absolute inset-0 flex items-center justify-center transition-opacity duration-200 ${isLoading || isProcessingInitial ? "opacity-100" : "pointer-events-none opacity-0"}`}
           >
-            <Loader2Icon
-              className={`text-muted-foreground h-8 w-8 ${isLoading || !showContent ? "animate-spin" : ""}`}
-            />
+            <Loader2Icon className="text-muted-foreground h-8 w-8 animate-spin" />
           </div>
-          {!isLoading && showContent && processedLogs.length === 0 ? (
-            <div className="text-muted-foreground flex h-full items-center justify-center">
-              <p>No logs available</p>
-            </div>
-          ) : (
-            <div
-              className={`space-y-0 transition-opacity duration-300 ${showContent ? "opacity-100" : "opacity-0"} ${!showContent ? "invisible" : ""}`}
-            >
-              {processedLogs.slice(0, visibleLogCount).map((log, index) => (
-                <ConsoleLine key={index} line={log} />
-              ))}
-            </div>
-          )}
+
+          <div
+            className={`transition-opacity duration-200 ${isLoading || isProcessingInitial ? "opacity-0" : "opacity-100"}`}
+          >
+            {processedLogs.length === 0 ? (
+              <div className="text-muted-foreground flex h-full items-center justify-center">
+                <p>No logs available</p>
+              </div>
+            ) : (
+              <div className="space-y-0">
+                {processedLogs.map((log, index) => {
+                  const isVisible =
+                    index >= visibleRange.start && index < visibleRange.end;
+
+                  if (isVisible) {
+                    return (
+                      <div
+                        key={index}
+                        ref={(el) => {
+                          itemRefs.current[index] = el;
+                        }}
+                      >
+                        <ConsoleLine line={log} />
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div
+                        key={index}
+                        ref={(el) => {
+                          itemRefs.current[index] = el;
+                        }}
+                        className="whitespace-pre-wrap text-gray-400"
+                        style={{ minHeight: "20px" }}
+                      >
+                        {log.message}
+                      </div>
+                    );
+                  }
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="px-3 pt-1 pb-3 sm:px-4 sm:pt-1 sm:pb-4">

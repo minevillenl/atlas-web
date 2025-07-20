@@ -12,6 +12,7 @@ export type LogLine = {
   logType: string | null;
   timestamp: Date | null;
   message: string;
+  id?: string;
 };
 
 export type LogStyle = {

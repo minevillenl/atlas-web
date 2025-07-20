@@ -326,3 +326,137 @@ export type GroupsResponse = z.infer<typeof GroupsResponseSchema>;
 export type GroupResponse = z.infer<typeof GroupResponseSchema>;
 export type ServerLogsData = z.infer<typeof ServerLogsDataSchema>;
 export type ServerLogsResponse = z.infer<typeof ServerLogsResponseSchema>;
+
+export const FileItemSchema = z.object({
+  name: z.string(),
+  mode: z.string(),
+  modeBits: z.number(),
+  mimeType: z.string(),
+  createdAt: z.string(),
+  modifiedAt: z.string(),
+  file: z.boolean(),
+  symlink: z.boolean(),
+  size: z.number().optional(),
+});
+
+export const FilesDataSchema = z.object({
+  path: z.string(),
+  files: z.array(FileItemSchema),
+});
+
+export const FilesResponseSchema = z.object({
+  status: z.string(),
+  data: FilesDataSchema,
+  timestamp: z.number(),
+});
+
+export type FileItem = z.infer<typeof FileItemSchema>;
+export type FilesData = z.infer<typeof FilesDataSchema>;
+export type FilesResponse = z.infer<typeof FilesResponseSchema>;
+
+export const FileContentsResponseSchema = z.object({
+  status: z.string(),
+  data: z.string(),
+  message: z.string(),
+  timestamp: z.number(),
+});
+
+export const FileWriteResponseSchema = z.object({
+  status: z.string(),
+  data: z.null(),
+  message: z.string(),
+  timestamp: z.number(),
+});
+
+export const FileDeleteResponseSchema = z.object({
+  status: z.string(),
+  message: z.string(),
+  timestamp: z.number(),
+});
+
+export const FileRenameRequestSchema = z.object({
+  oldPath: z.string(),
+  newPath: z.string(),
+});
+
+export const FileRenameResponseSchema = z.object({
+  status: z.string(),
+  message: z.string(),
+  timestamp: z.number(),
+});
+
+export const FileMkdirRequestSchema = z.object({
+  path: z.string(),
+});
+
+export const FileMkdirResponseSchema = z.object({
+  status: z.string(),
+  data: z.object({
+    path: z.string(),
+  }),
+  message: z.string(),
+  timestamp: z.number(),
+});
+
+export const FileUploadResponseSchema = z.object({
+  status: z.string(),
+  data: z.object({
+    path: z.string(),
+    size: z.number(),
+  }),
+  message: z.string(),
+  timestamp: z.number(),
+});
+
+export const ChunkedUploadStartRequestSchema = z.object({
+  path: z.string(),
+  totalSize: z.number(),
+});
+
+export const ChunkedUploadStartResponseSchema = z.object({
+  status: z.string(),
+  data: z.object({
+    uploadId: z.string(),
+    chunkSize: z.number(),
+    totalChunks: z.number(),
+    path: z.string(),
+  }),
+  message: z.string(),
+});
+
+export const ChunkedUploadChunkResponseSchema = z.object({
+  status: z.string(),
+  data: z.object({
+    uploadId: z.string(),
+    chunkNumber: z.number(),
+    receivedChunks: z.number(),
+    totalChunks: z.number(),
+    progress: z.number(),
+    isComplete: z.boolean(),
+  }),
+  message: z.string(),
+});
+
+export const ChunkedUploadCompleteResponseSchema = z.object({
+  status: z.string(),
+  data: z.object({
+    uploadId: z.string(),
+    path: z.string(),
+    size: z.number(),
+    totalChunks: z.number(),
+  }),
+  message: z.string(),
+});
+
+export type FileContentsResponse = z.infer<typeof FileContentsResponseSchema>;
+export type FileWriteResponse = z.infer<typeof FileWriteResponseSchema>;
+export type FileDeleteResponse = z.infer<typeof FileDeleteResponseSchema>;
+export type FileRenameRequest = z.infer<typeof FileRenameRequestSchema>;
+export type FileRenameResponse = z.infer<typeof FileRenameResponseSchema>;
+export type FileMkdirRequest = z.infer<typeof FileMkdirRequestSchema>;
+export type FileMkdirResponse = z.infer<typeof FileMkdirResponseSchema>;
+export type FileUploadResponse = z.infer<typeof FileUploadResponseSchema>;
+export type ChunkedUploadStartRequest = z.infer<typeof ChunkedUploadStartRequestSchema>;
+export type ChunkedUploadStartResponse = z.infer<typeof ChunkedUploadStartResponseSchema>;
+export type ChunkedUploadChunkResponse = z.infer<typeof ChunkedUploadChunkResponseSchema>;
+export type ChunkedUploadCompleteResponse = z.infer<typeof ChunkedUploadCompleteResponseSchema>;

@@ -14,6 +14,7 @@ import { ThemeProvider } from "next-themes";
 import { DefaultCatchBoundary } from "@/components/default-catch-boundary";
 import { NotFound } from "@/components/not-found";
 import { Toaster } from "@/components/ui/sonner";
+import { UploadProgressProvider } from "@/contexts/upload-progress-context";
 import { authQueryOptions } from "@/features/auth/services/auth.query";
 import appCss from "@/styles/globals.css?url";
 import { seo } from "@/utils/seo";
@@ -35,9 +36,11 @@ const RootLayout = ({ children }: { children: React.ReactNode }) => {
           enableSystem
           attribute="class"
         >
-          <Toaster richColors />
-          {children}
-          <ReactQueryDevtools buttonPosition="bottom-right" />
+          <UploadProgressProvider>
+            <Toaster richColors />
+            {children}
+            <ReactQueryDevtools buttonPosition="bottom-right" />
+          </UploadProgressProvider>
         </ThemeProvider>
 
         <Scripts />

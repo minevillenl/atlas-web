@@ -1,12 +1,30 @@
+import { env } from "@/env";
+
 import {
   type ApiResponse,
   ApiResponseSchema,
+  type ChunkedUploadChunkResponse,
+  ChunkedUploadChunkResponseSchema,
+  type ChunkedUploadCompleteResponse,
+  ChunkedUploadCompleteResponseSchema,
+  type ChunkedUploadStartResponse,
+  ChunkedUploadStartResponseSchema,
   type CommandResponse,
   CommandResponseSchema,
   type CreateServerRequest,
   CreateServerRequestSchema,
   type DeleteResponse,
   DeleteResponseSchema,
+  FileDeleteResponseSchema,
+  type FileMkdirResponse,
+  FileMkdirResponseSchema,
+  type FileRenameRequest,
+  FileRenameRequestSchema,
+  FileRenameResponseSchema,
+  type FileUploadResponse,
+  FileUploadResponseSchema,
+  type FilesResponse,
+  FilesResponseSchema,
   type GroupResponse,
   GroupResponseSchema,
   type GroupsResponse,
@@ -43,9 +61,8 @@ export class AtlasApiClient {
   private apiKey: string;
 
   constructor(baseUrl?: string, apiKey?: string) {
-    this.baseUrl =
-      baseUrl || process.env.ATLAS_API_URL || "http://localhost:9090";
-    this.apiKey = apiKey || process.env.ATLAS_API_KEY || "";
+    this.baseUrl = baseUrl || env.ATLAS_API_URL;
+    this.apiKey = apiKey || env.ATLAS_API_KEY;
 
     if (!this.apiKey) {
       throw new Error(
@@ -225,10 +242,271 @@ export class AtlasApiClient {
 
   async getServerLogs(id: string): Promise<ServerLogsResponse> {
     return this.request(
-      `/api/v1/servers/${id}/logs?lines=230`,
+      `/api/v1/servers/${id}/logs`,
       {},
       ServerLogsResponseSchema
     );
+  }
+
+  async getServerFiles(id: string, path?: string): Promise<FilesResponse> {
+    const encodedPath = path ? encodeURIComponent(path) : "";
+    const url = `/api/v1/servers/${id}/files${encodedPath ? `?path=${encodedPath}` : ""}`;
+    return this.request(url, {}, FilesResponseSchema);
+  }
+
+  async getServerFileContents(id: string, file: string): Promise<string> {
+    const encodedFile = encodeURIComponent(file);
+    const url = `/api/v1/servers/${id}/files/contents?file=${encodedFile}`;
+
+    const response = await fetch(`${this.baseUrl}${url}`, {
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Atlas API Error: ${errorText || response.statusText}`);
+    }
+
+    return response.text();
+  }
+
+  async writeServerFileContents(
+    id: string,
+    file: string,
+    content: string
+  ): Promise<string> {
+    const encodedFile = encodeURIComponent(file);
+    const url = `/api/v1/servers/${id}/files/contents?file=${encodedFile}`;
+
+    const response = await fetch(`${this.baseUrl}${url}`, {
+      method: "PUT",
+      body: content,
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        "Content-Type": "text/plain",
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Atlas API Error: ${errorText || response.statusText}`);
+    }
+
+    return response.text();
+  }
+
+  async deleteServerFile(id: string, file: string): Promise<string> {
+    const encodedFile = encodeURIComponent(file);
+    const url = `/api/v1/servers/${id}/files/contents?file=${encodedFile}`;
+    return this.request(url, { method: "DELETE" }, FileDeleteResponseSchema);
+  }
+
+  async renameServerFile(
+    id: string,
+    renameData: FileRenameRequest
+  ): Promise<string> {
+    FileRenameRequestSchema.parse(renameData);
+    const url = `/api/v1/servers/${id}/files/rename`;
+    return this.request(
+      url,
+      {
+        method: "POST",
+        body: JSON.stringify(renameData),
+      },
+      FileRenameResponseSchema
+    );
+  }
+
+  async downloadServerFile(id: string, file: string): Promise<Blob> {
+    const encodedFile = encodeURIComponent(file);
+    const url = `/api/v1/servers/${id}/files/download?file=${encodedFile}`;
+
+    const response = await fetch(`${this.baseUrl}${url}`, {
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Atlas API Error: ${errorText || response.statusText}`);
+    }
+
+    return response.blob();
+  }
+
+  async createServerFolder(
+    id: string,
+    path: string
+  ): Promise<FileMkdirResponse> {
+    const url = `/api/v1/servers/${id}/files/mkdir`;
+    return this.request(
+      url,
+      {
+        method: "POST",
+        body: JSON.stringify({ path }),
+      },
+      FileMkdirResponseSchema
+    );
+  }
+
+  async uploadServerFile(
+    id: string,
+    path: string,
+    file: File,
+    onProgress?: (_progress: number) => void
+  ): Promise<FileUploadResponse> {
+    const encodedPath = encodeURIComponent(path);
+    const url = `/api/v1/servers/${id}/files/upload?path=${encodedPath}`;
+
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+
+      if (onProgress) {
+        xhr.upload.addEventListener("progress", (event) => {
+          if (event.lengthComputable) {
+            const progress = (event.loaded / event.total) * 100;
+            onProgress(progress);
+          }
+        });
+      }
+
+      xhr.addEventListener("load", async () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            const result = FileUploadResponseSchema.parse(data);
+            resolve(result);
+          } catch (error) {
+            reject(new Error(`Failed to parse response: ${error}`));
+          }
+        } else {
+          reject(
+            new Error(`Atlas API Error: ${xhr.responseText || xhr.statusText}`)
+          );
+        }
+      });
+
+      xhr.addEventListener("error", () => {
+        reject(new Error("Network error occurred during upload"));
+      });
+
+      xhr.addEventListener("timeout", () => {
+        reject(new Error("Upload timeout"));
+      });
+
+      xhr.open("POST", `${this.baseUrl}${url}`);
+      xhr.setRequestHeader("Authorization", `Bearer ${this.apiKey}`);
+      xhr.setRequestHeader("Content-Type", "application/octet-stream");
+
+      // Set timeout to 10 minutes for large files
+      xhr.timeout = 10 * 60 * 1000;
+
+      xhr.send(file);
+    });
+  }
+
+  async startChunkedUpload(
+    id: string,
+    path: string,
+    totalSize: number
+  ): Promise<ChunkedUploadStartResponse> {
+    const url = `/api/v1/servers/${id}/files/upload/start`;
+    return this.request(
+      url,
+      {
+        method: "POST",
+        body: JSON.stringify({ path, totalSize }),
+      },
+      ChunkedUploadStartResponseSchema
+    );
+  }
+
+  async uploadChunk(
+    id: string,
+    uploadId: string,
+    chunkNumber: number,
+    chunkData: Blob
+  ): Promise<ChunkedUploadChunkResponse> {
+    const url = `/api/v1/servers/${id}/files/upload/${uploadId}/chunk/${chunkNumber}`;
+
+    const response = await fetch(`${this.baseUrl}${url}`, {
+      method: "PUT",
+      body: chunkData,
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Atlas API Error: ${errorText || response.statusText}`);
+    }
+
+    const data = await response.json();
+    return ChunkedUploadChunkResponseSchema.parse(data);
+  }
+
+  async completeChunkedUpload(
+    id: string,
+    uploadId: string
+  ): Promise<ChunkedUploadCompleteResponse> {
+    const url = `/api/v1/servers/${id}/files/upload/${uploadId}/complete`;
+    return this.request(
+      url,
+      {
+        method: "POST",
+      },
+      ChunkedUploadCompleteResponseSchema
+    );
+  }
+
+  async chunkedUploadFile(
+    id: string,
+    path: string,
+    file: File,
+    onProgress?: (_progress: number) => void
+  ): Promise<ChunkedUploadCompleteResponse> {
+    // Start the upload session
+    const startResponse = await this.startChunkedUpload(id, path, file.size);
+    const { uploadId, chunkSize, totalChunks } = startResponse.data;
+
+    // Upload chunks
+    for (let chunkNumber = 1; chunkNumber <= totalChunks; chunkNumber++) {
+      const start = (chunkNumber - 1) * chunkSize;
+      const end = Math.min(start + chunkSize, file.size);
+      const chunk = file.slice(start, end);
+
+      const chunkResponse = await this.uploadChunk(
+        id,
+        uploadId,
+        chunkNumber,
+        chunk
+      );
+
+      if (onProgress) {
+        onProgress(chunkResponse.data.progress * 100);
+      }
+    }
+
+    // Complete the upload
+    const completeResponse = await this.completeChunkedUpload(id, uploadId);
+
+    if (onProgress) {
+      onProgress(100);
+    }
+
+    return completeResponse;
+  }
+
+  async generateWebSocketToken(
+    id: string
+  ): Promise<ApiResponse<{ token: string; expiresAt: number }>> {
+    return this.request(`/api/v1/servers/${id}/ws/token`, {
+      method: "POST",
+    });
   }
 
   connectToServer(id: string): WebSocket {
@@ -287,6 +565,34 @@ const atlas = {
   getPlayerCount: () => getAtlasClient().getPlayerCount(),
   getServerCount: () => getAtlasClient().getServerCount(),
   getServerLogs: (id: string) => getAtlasClient().getServerLogs(id),
+  getServerFiles: (id: string, path?: string) =>
+    getAtlasClient().getServerFiles(id, path),
+  getServerFileContents: (id: string, file: string) =>
+    getAtlasClient().getServerFileContents(id, file),
+  writeServerFileContents: (id: string, file: string, content: string) =>
+    getAtlasClient().writeServerFileContents(id, file, content),
+  deleteServerFile: (id: string, file: string) =>
+    getAtlasClient().deleteServerFile(id, file),
+  renameServerFile: (id: string, renameData: FileRenameRequest) =>
+    getAtlasClient().renameServerFile(id, renameData),
+  downloadServerFile: (id: string, file: string) =>
+    getAtlasClient().downloadServerFile(id, file),
+  createServerFolder: (id: string, path: string) =>
+    getAtlasClient().createServerFolder(id, path),
+  uploadServerFile: (
+    id: string,
+    path: string,
+    file: File,
+    onProgress?: (_progress: number) => void
+  ) => getAtlasClient().uploadServerFile(id, path, file, onProgress),
+  chunkedUploadFile: (
+    id: string,
+    path: string,
+    file: File,
+    onProgress?: (_progress: number) => void
+  ) => getAtlasClient().chunkedUploadFile(id, path, file, onProgress),
+  generateWebSocketToken: (id: string) =>
+    getAtlasClient().generateWebSocketToken(id),
   connectToServer: (id: string) => getAtlasClient().connectToServer(id),
 };
 

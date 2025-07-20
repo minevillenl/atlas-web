@@ -22,7 +22,12 @@ import { Route as MainServersServerIdRouteImport } from "./routes/_main/servers/
 import { Route as MainGroupsGroupIdRouteImport } from "./routes/_main/groups/$groupId";
 import { Route as MainServersServerIdIndexRouteImport } from "./routes/_main/servers/$serverId/index";
 import { Route as MainServersServerIdPlayersRouteImport } from "./routes/_main/servers/$serverId/players";
-import { Route as MainServersServerIdFilesRouteImport } from "./routes/_main/servers/$serverId/files";
+import { Route as MainServersServerIdFilesIndexRouteImport } from "./routes/_main/servers/$serverId/files/index";
+import { Route as MainServersServerIdFilesNewRouteImport } from "./routes/_main/servers/$serverId/files/new";
+import { Route as MainServersServerIdFilesEditRouteImport } from "./routes/_main/servers/$serverId/files/edit";
+import { ServerRoute as ApiUploadProgressServerRouteImport } from "./routes/api/upload-progress";
+import { ServerRoute as ApiUploadServerRouteImport } from "./routes/api/upload";
+import { ServerRoute as ApiChunkedUploadServerRouteImport } from "./routes/api/chunked-upload";
 import { ServerRoute as ApiSplatServerRouteImport } from "./routes/api/$";
 import { ServerRoute as ApiAuthSplatServerRouteImport } from "./routes/api/auth/$";
 
@@ -83,12 +88,39 @@ const MainServersServerIdPlayersRoute =
     path: "/players",
     getParentRoute: () => MainServersServerIdRoute,
   } as any);
-const MainServersServerIdFilesRoute =
-  MainServersServerIdFilesRouteImport.update({
-    id: "/files",
-    path: "/files",
+const MainServersServerIdFilesIndexRoute =
+  MainServersServerIdFilesIndexRouteImport.update({
+    id: "/files/",
+    path: "/files/",
     getParentRoute: () => MainServersServerIdRoute,
   } as any);
+const MainServersServerIdFilesNewRoute =
+  MainServersServerIdFilesNewRouteImport.update({
+    id: "/files/new",
+    path: "/files/new",
+    getParentRoute: () => MainServersServerIdRoute,
+  } as any);
+const MainServersServerIdFilesEditRoute =
+  MainServersServerIdFilesEditRouteImport.update({
+    id: "/files/edit",
+    path: "/files/edit",
+    getParentRoute: () => MainServersServerIdRoute,
+  } as any);
+const ApiUploadProgressServerRoute = ApiUploadProgressServerRouteImport.update({
+  id: "/api/upload-progress",
+  path: "/api/upload-progress",
+  getParentRoute: () => rootServerRouteImport,
+} as any);
+const ApiUploadServerRoute = ApiUploadServerRouteImport.update({
+  id: "/api/upload",
+  path: "/api/upload",
+  getParentRoute: () => rootServerRouteImport,
+} as any);
+const ApiChunkedUploadServerRoute = ApiChunkedUploadServerRouteImport.update({
+  id: "/api/chunked-upload",
+  path: "/api/chunked-upload",
+  getParentRoute: () => rootServerRouteImport,
+} as any);
 const ApiSplatServerRoute = ApiSplatServerRouteImport.update({
   id: "/api/$",
   path: "/api/$",
@@ -108,9 +140,11 @@ export interface FileRoutesByFullPath {
   "/servers/$serverId": typeof MainServersServerIdRouteWithChildren;
   "/groups": typeof MainGroupsIndexRoute;
   "/servers": typeof MainServersIndexRoute;
-  "/servers/$serverId/files": typeof MainServersServerIdFilesRoute;
   "/servers/$serverId/players": typeof MainServersServerIdPlayersRoute;
   "/servers/$serverId/": typeof MainServersServerIdIndexRoute;
+  "/servers/$serverId/files/edit": typeof MainServersServerIdFilesEditRoute;
+  "/servers/$serverId/files/new": typeof MainServersServerIdFilesNewRoute;
+  "/servers/$serverId/files": typeof MainServersServerIdFilesIndexRoute;
 }
 export interface FileRoutesByTo {
   "/login": typeof AuthLoginRoute;
@@ -119,9 +153,11 @@ export interface FileRoutesByTo {
   "/groups/$groupId": typeof MainGroupsGroupIdRoute;
   "/groups": typeof MainGroupsIndexRoute;
   "/servers": typeof MainServersIndexRoute;
-  "/servers/$serverId/files": typeof MainServersServerIdFilesRoute;
   "/servers/$serverId/players": typeof MainServersServerIdPlayersRoute;
   "/servers/$serverId": typeof MainServersServerIdIndexRoute;
+  "/servers/$serverId/files/edit": typeof MainServersServerIdFilesEditRoute;
+  "/servers/$serverId/files/new": typeof MainServersServerIdFilesNewRoute;
+  "/servers/$serverId/files": typeof MainServersServerIdFilesIndexRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
@@ -134,9 +170,11 @@ export interface FileRoutesById {
   "/_main/servers/$serverId": typeof MainServersServerIdRouteWithChildren;
   "/_main/groups/": typeof MainGroupsIndexRoute;
   "/_main/servers/": typeof MainServersIndexRoute;
-  "/_main/servers/$serverId/files": typeof MainServersServerIdFilesRoute;
   "/_main/servers/$serverId/players": typeof MainServersServerIdPlayersRoute;
   "/_main/servers/$serverId/": typeof MainServersServerIdIndexRoute;
+  "/_main/servers/$serverId/files/edit": typeof MainServersServerIdFilesEditRoute;
+  "/_main/servers/$serverId/files/new": typeof MainServersServerIdFilesNewRoute;
+  "/_main/servers/$serverId/files/": typeof MainServersServerIdFilesIndexRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
@@ -148,9 +186,11 @@ export interface FileRouteTypes {
     | "/servers/$serverId"
     | "/groups"
     | "/servers"
-    | "/servers/$serverId/files"
     | "/servers/$serverId/players"
-    | "/servers/$serverId/";
+    | "/servers/$serverId/"
+    | "/servers/$serverId/files/edit"
+    | "/servers/$serverId/files/new"
+    | "/servers/$serverId/files";
   fileRoutesByTo: FileRoutesByTo;
   to:
     | "/login"
@@ -159,9 +199,11 @@ export interface FileRouteTypes {
     | "/groups/$groupId"
     | "/groups"
     | "/servers"
-    | "/servers/$serverId/files"
     | "/servers/$serverId/players"
-    | "/servers/$serverId";
+    | "/servers/$serverId"
+    | "/servers/$serverId/files/edit"
+    | "/servers/$serverId/files/new"
+    | "/servers/$serverId/files";
   id:
     | "__root__"
     | "/_auth"
@@ -173,9 +215,11 @@ export interface FileRouteTypes {
     | "/_main/servers/$serverId"
     | "/_main/groups/"
     | "/_main/servers/"
-    | "/_main/servers/$serverId/files"
     | "/_main/servers/$serverId/players"
-    | "/_main/servers/$serverId/";
+    | "/_main/servers/$serverId/"
+    | "/_main/servers/$serverId/files/edit"
+    | "/_main/servers/$serverId/files/new"
+    | "/_main/servers/$serverId/files/";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
@@ -184,27 +228,55 @@ export interface RootRouteChildren {
 }
 export interface FileServerRoutesByFullPath {
   "/api/$": typeof ApiSplatServerRoute;
+  "/api/chunked-upload": typeof ApiChunkedUploadServerRoute;
+  "/api/upload": typeof ApiUploadServerRoute;
+  "/api/upload-progress": typeof ApiUploadProgressServerRoute;
   "/api/auth/$": typeof ApiAuthSplatServerRoute;
 }
 export interface FileServerRoutesByTo {
   "/api/$": typeof ApiSplatServerRoute;
+  "/api/chunked-upload": typeof ApiChunkedUploadServerRoute;
+  "/api/upload": typeof ApiUploadServerRoute;
+  "/api/upload-progress": typeof ApiUploadProgressServerRoute;
   "/api/auth/$": typeof ApiAuthSplatServerRoute;
 }
 export interface FileServerRoutesById {
   __root__: typeof rootServerRouteImport;
   "/api/$": typeof ApiSplatServerRoute;
+  "/api/chunked-upload": typeof ApiChunkedUploadServerRoute;
+  "/api/upload": typeof ApiUploadServerRoute;
+  "/api/upload-progress": typeof ApiUploadProgressServerRoute;
   "/api/auth/$": typeof ApiAuthSplatServerRoute;
 }
 export interface FileServerRouteTypes {
   fileServerRoutesByFullPath: FileServerRoutesByFullPath;
-  fullPaths: "/api/$" | "/api/auth/$";
+  fullPaths:
+    | "/api/$"
+    | "/api/chunked-upload"
+    | "/api/upload"
+    | "/api/upload-progress"
+    | "/api/auth/$";
   fileServerRoutesByTo: FileServerRoutesByTo;
-  to: "/api/$" | "/api/auth/$";
-  id: "__root__" | "/api/$" | "/api/auth/$";
+  to:
+    | "/api/$"
+    | "/api/chunked-upload"
+    | "/api/upload"
+    | "/api/upload-progress"
+    | "/api/auth/$";
+  id:
+    | "__root__"
+    | "/api/$"
+    | "/api/chunked-upload"
+    | "/api/upload"
+    | "/api/upload-progress"
+    | "/api/auth/$";
   fileServerRoutesById: FileServerRoutesById;
 }
 export interface RootServerRouteChildren {
   ApiSplatServerRoute: typeof ApiSplatServerRoute;
+  ApiChunkedUploadServerRoute: typeof ApiChunkedUploadServerRoute;
+  ApiUploadServerRoute: typeof ApiUploadServerRoute;
+  ApiUploadProgressServerRoute: typeof ApiUploadProgressServerRoute;
   ApiAuthSplatServerRoute: typeof ApiAuthSplatServerRoute;
 }
 
@@ -287,17 +359,52 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof MainServersServerIdPlayersRouteImport;
       parentRoute: typeof MainServersServerIdRoute;
     };
-    "/_main/servers/$serverId/files": {
-      id: "/_main/servers/$serverId/files";
+    "/_main/servers/$serverId/files/": {
+      id: "/_main/servers/$serverId/files/";
       path: "/files";
       fullPath: "/servers/$serverId/files";
-      preLoaderRoute: typeof MainServersServerIdFilesRouteImport;
+      preLoaderRoute: typeof MainServersServerIdFilesIndexRouteImport;
+      parentRoute: typeof MainServersServerIdRoute;
+    };
+    "/_main/servers/$serverId/files/new": {
+      id: "/_main/servers/$serverId/files/new";
+      path: "/files/new";
+      fullPath: "/servers/$serverId/files/new";
+      preLoaderRoute: typeof MainServersServerIdFilesNewRouteImport;
+      parentRoute: typeof MainServersServerIdRoute;
+    };
+    "/_main/servers/$serverId/files/edit": {
+      id: "/_main/servers/$serverId/files/edit";
+      path: "/files/edit";
+      fullPath: "/servers/$serverId/files/edit";
+      preLoaderRoute: typeof MainServersServerIdFilesEditRouteImport;
       parentRoute: typeof MainServersServerIdRoute;
     };
   }
 }
 declare module "@tanstack/react-start/server" {
   interface ServerFileRoutesByPath {
+    "/api/upload-progress": {
+      id: "/api/upload-progress";
+      path: "/api/upload-progress";
+      fullPath: "/api/upload-progress";
+      preLoaderRoute: typeof ApiUploadProgressServerRouteImport;
+      parentRoute: typeof rootServerRouteImport;
+    };
+    "/api/upload": {
+      id: "/api/upload";
+      path: "/api/upload";
+      fullPath: "/api/upload";
+      preLoaderRoute: typeof ApiUploadServerRouteImport;
+      parentRoute: typeof rootServerRouteImport;
+    };
+    "/api/chunked-upload": {
+      id: "/api/chunked-upload";
+      path: "/api/chunked-upload";
+      fullPath: "/api/chunked-upload";
+      preLoaderRoute: typeof ApiChunkedUploadServerRouteImport;
+      parentRoute: typeof rootServerRouteImport;
+    };
     "/api/$": {
       id: "/api/$";
       path: "/api/$";
@@ -328,15 +435,19 @@ const AuthRouteChildren: AuthRouteChildren = {
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren);
 
 interface MainServersServerIdRouteChildren {
-  MainServersServerIdFilesRoute: typeof MainServersServerIdFilesRoute;
   MainServersServerIdPlayersRoute: typeof MainServersServerIdPlayersRoute;
   MainServersServerIdIndexRoute: typeof MainServersServerIdIndexRoute;
+  MainServersServerIdFilesEditRoute: typeof MainServersServerIdFilesEditRoute;
+  MainServersServerIdFilesNewRoute: typeof MainServersServerIdFilesNewRoute;
+  MainServersServerIdFilesIndexRoute: typeof MainServersServerIdFilesIndexRoute;
 }
 
 const MainServersServerIdRouteChildren: MainServersServerIdRouteChildren = {
-  MainServersServerIdFilesRoute: MainServersServerIdFilesRoute,
   MainServersServerIdPlayersRoute: MainServersServerIdPlayersRoute,
   MainServersServerIdIndexRoute: MainServersServerIdIndexRoute,
+  MainServersServerIdFilesEditRoute: MainServersServerIdFilesEditRoute,
+  MainServersServerIdFilesNewRoute: MainServersServerIdFilesNewRoute,
+  MainServersServerIdFilesIndexRoute: MainServersServerIdFilesIndexRoute,
 };
 
 const MainServersServerIdRouteWithChildren =
@@ -369,6 +480,9 @@ export const routeTree = rootRouteImport
   ._addFileTypes<FileRouteTypes>();
 const rootServerRouteChildren: RootServerRouteChildren = {
   ApiSplatServerRoute: ApiSplatServerRoute,
+  ApiChunkedUploadServerRoute: ApiChunkedUploadServerRoute,
+  ApiUploadServerRoute: ApiUploadServerRoute,
+  ApiUploadProgressServerRoute: ApiUploadProgressServerRoute,
   ApiAuthSplatServerRoute: ApiAuthSplatServerRoute,
 };
 export const serverRouteTree = rootServerRouteImport

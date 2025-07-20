@@ -37,7 +37,7 @@ const Header = () => {
     <header className="site-header mb-4 sm:mb-0">
       <div className="main-with-min-height mx-auto mb-2 max-w-7xl px-4 sm:mb-4 sm:px-8">
         <div className="border-border border-b">
-          <div className="flex flex-row items-center justify-between py-4 sm:py-6">
+          <div className="flex flex-row items-center py-4 sm:py-6">
             <Link to="/" className="flex items-center gap-3 sm:gap-4">
               <img
                 src="/logo.png"
@@ -47,38 +47,29 @@ const Header = () => {
               <p className="text-xl font-semibold sm:text-2xl">Atlas</p>
             </Link>
 
-            <div className="flex items-center gap-4 sm:hidden">
-              <UserIcon
-                onClick={() => authClient.signOut()}
-                className="text-muted-foreground hover:text-foreground h-5 w-5 cursor-pointer"
-              />
+            <div className="ml-8 hidden items-center gap-4 sm:flex lg:gap-6">
+              {links.map((link) => (
+                <Link
+                  key={link.name}
+                  to={link.to}
+                  className="text-muted-foreground hover:text-foreground relative flex items-center gap-2 px-3 py-2 text-xs font-semibold"
+                  activeProps={{
+                    className:
+                      "!text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary after:translate-y-[25.5px]",
+                  }}
+                >
+                  <link.icon className="h-4 w-4" />
+                  {link.name}
+                </Link>
+              ))}
             </div>
 
-            <div className="hidden items-center gap-8 sm:flex lg:gap-12">
-              <div className="flex flex-row items-center gap-4">
-                {links.map((link) => (
-                  <Link
-                    key={link.name}
-                    to={link.to}
-                    className="text-muted-foreground hover:text-foreground relative flex items-center gap-2 px-3 py-2 text-xs font-semibold"
-                    activeProps={{
-                      className:
-                        "!text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary after:translate-y-[25.5px]",
-                    }}
-                  >
-                    <link.icon className="h-4 w-4" />
-                    {link.name}
-                  </Link>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  <UserIcon
-                    onClick={() => authClient.signOut()}
-                    className="text-muted-foreground hover:text-foreground h-5 w-5 cursor-pointer"
-                  />
-                </div>
+            <div className="ml-auto flex items-center gap-4">
+              <div className="relative">
+                <UserIcon
+                  onClick={() => authClient.signOut()}
+                  className="text-muted-foreground hover:text-foreground h-5 w-5 cursor-pointer"
+                />
               </div>
             </div>
           </div>

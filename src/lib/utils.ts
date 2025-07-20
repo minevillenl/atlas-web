@@ -117,3 +117,71 @@ export function getGroupColor(groupName: string): string {
     .reduce((acc, char) => acc + char.charCodeAt(0), 0);
   return GROUP_COLORS[hash % GROUP_COLORS.length];
 }
+
+/**
+ * MIME types that can be edited in a text editor
+ */
+export const EDITABLE_MIME_TYPES = [
+  // Text files
+  "text/plain",
+  "text/html",
+  "text/css",
+  "text/csv",
+  "text/xml",
+  "text/x-log",
+  "text/yaml",
+  "text/x-yaml",
+  "text/x-toml",
+  "text/x-ini",
+  "text/x-properties",
+  "text/x-sh",
+  "text/x-python",
+  "text/x-java-source",
+  "text/x-c",
+  "text/x-cpp",
+  "text/x-csharp",
+  "text/x-go",
+  "text/x-rust",
+  "text/x-php",
+  "text/x-ruby",
+  "text/x-perl",
+  "text/x-lua",
+  "text/x-sql",
+  "text/x-dockerfile",
+  "text/x-makefile",
+  
+  // Application types that are text-based
+  "application/json",
+  "application/xml",
+  "application/javascript",
+  "application/typescript",
+  "application/yaml",
+  "application/x-yaml",
+  "application/x-toml",
+  "application/x-ini",
+  "application/x-properties",
+  "application/x-sh",
+  "application/x-python",
+  "application/x-java-source",
+  "application/x-dockerfile",
+  "application/x-httpd-php",
+  "application/sql",
+  "application/x-sql",
+  
+  // Configuration files
+  "application/x-nginx-conf",
+  "application/x-apache-conf",
+  "application/x-systemd-unit",
+  
+  // Markup and markdown
+  "text/markdown",
+  "text/x-markdown",
+  "application/x-markdown",
+] as const;
+
+/**
+ * Check if a file is editable based on its MIME type
+ */
+export function isFileEditable(mimeType: string): boolean {
+  return EDITABLE_MIME_TYPES.includes(mimeType as any);
+}

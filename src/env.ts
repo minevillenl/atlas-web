@@ -5,6 +5,8 @@ import { z } from "zod";
 export const env = createEnv({
   server: {
     DATABASE_URL: z.url(),
+    ATLAS_API_URL: z.string().url(),
+    ATLAS_API_KEY: z.string().min(1),
   },
 
   /**
@@ -15,6 +17,7 @@ export const env = createEnv({
 
   client: {
     VITE_BASE_URL: z.string().url(),
+    VITE_ATLAS_WEBSOCKET_URL: z.string().url(),
   },
 
   /**

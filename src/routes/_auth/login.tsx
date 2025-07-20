@@ -36,8 +36,6 @@ const RouteComponent = () => {
   });
 
   const onSubmit = async (data: LoginForm) => {
-    console.log("Form submitted:", data);
-
     try {
       const result = await authClient.signIn.email(
         {

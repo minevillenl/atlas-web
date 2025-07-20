@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
@@ -9,6 +11,7 @@ import {
 
 import ServerConsole from "@/components/server/server-console";
 import { Card } from "@/components/ui/card";
+import { useWebSocketContext } from "@/contexts/websocket-context";
 import { orpc } from "@/lib/orpc";
 
 const formatBytes = (bytes: number) => {
@@ -21,14 +24,116 @@ const formatBytes = (bytes: number) => {
   return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
 };
 
+interface ServerStats {
+  cpu: number;
+  ram: {
+    used: number;
+    total: number;
+    percentage: number;
+  };
+  disk: {
+    used: number;
+    total: number;
+    percentage: number;
+  };
+  network: {
+    uploadBytes: number;
+    downloadBytes: number;
+  };
+  players: number;
+  maxPlayers: number;
+  status: string;
+}
+
 const RouteComponent = () => {
   const { serverId } = Route.useParams();
+  const [realtimeStats, setRealtimeStats] = useState<ServerStats | null>(null);
+  const [realtimeServerInfo, setRealtimeServerInfo] = useState<any>(null);
 
   const { data: server } = useQuery({
     ...orpc.atlas.getServer.queryOptions({
       input: { server: serverId },
     }),
   });
+
+  const { sendMessage, isConnected, subscribe } = useWebSocketContext();
+
+  // Subscribe to WebSocket messages
+  useEffect(() => {
+    const unsubscribe = subscribe((message) => {
+      if (message.type === "stats") {
+        setRealtimeStats(message.data);
+      } else if (message.type === "server-info") {
+        setRealtimeServerInfo(message.data);
+      } else if (message.type === "status-update") {
+        setRealtimeServerInfo((prev: any) => ({
+          ...prev,
+          status: message.data.status,
+          serverId: message.data.serverId,
+        }));
+      }
+    });
+
+    return unsubscribe;
+  }, [subscribe]);
+
+  // Subscribe to real-time data when connected
+  useEffect(() => {
+    if (isConnected) {
+      // Add a small delay to ensure WebSocket is fully ready
+      setTimeout(() => {
+        sendMessage({
+          type: "subscribe",
+          streams: ["stats"],
+          targets: [serverId],
+        });
+      }, 100);
+    }
+  }, [isConnected, sendMessage, serverId]);
+
+  // Use real-time stats if available, otherwise fallback to server data
+  const currentStatus =
+    realtimeServerInfo?.status ?? server?.serverInfo?.status ?? "unknown";
+  const isServerStopped = currentStatus === "STOPPED";
+
+  const currentStats = realtimeStats || {
+    cpu: server?.resourceMetrics?.cpuUsage || 0,
+    ram: {
+      used: server?.resourceMetrics?.memoryUsed || 0,
+      total: server?.resourceMetrics?.memoryTotal || 0,
+      percentage:
+        server?.resourceMetrics?.memoryUsed &&
+        server?.resourceMetrics?.memoryTotal
+          ? (server.resourceMetrics.memoryUsed /
+              server.resourceMetrics.memoryTotal) *
+            100
+          : 0,
+    },
+    disk: {
+      used: server?.resourceMetrics?.diskUsed || 0,
+      total: server?.resourceMetrics?.diskTotal || 0,
+      percentage: 0,
+    },
+    network: {
+      uploadBytes: server?.resourceMetrics?.networkSendBandwidth || 0,
+      downloadBytes: server?.resourceMetrics?.networkReceiveBandwidth || 0,
+    },
+    players: realtimeServerInfo?.players ?? 0,
+    maxPlayers: realtimeServerInfo?.maxPlayers ?? 0,
+    status: currentStatus,
+  };
+
+  // Override all stats to 0 when server is stopped
+  if (isServerStopped) {
+    currentStats.cpu = 0;
+    currentStats.ram.used = 0;
+    currentStats.ram.percentage = 0;
+    currentStats.disk.used = 0;
+    currentStats.disk.percentage = 0;
+    currentStats.network.uploadBytes = 0;
+    currentStats.network.downloadBytes = 0;
+    currentStats.players = 0;
+  }
 
   if (!server) {
     return <div>Loading...</div>;
@@ -41,7 +146,7 @@ const RouteComponent = () => {
           <div className="flex h-full items-center justify-between">
             <div className="flex h-full flex-col justify-center">
               <p className="text-base font-semibold sm:text-lg">
-                {server.resourceMetrics?.cpuUsage?.toFixed(1) ?? "0"}%
+                {currentStats.cpu.toFixed(1)}%
               </p>
               <p className="text-muted-foreground text-xs sm:text-sm">
                 CPU Load
@@ -57,11 +162,13 @@ const RouteComponent = () => {
           <div className="flex h-full items-center justify-between">
             <div className="flex h-full flex-col justify-center">
               <p className="text-base font-semibold sm:text-lg">
-                {formatBytes(server.resourceMetrics?.memoryUsed ?? 0)}
+                {formatBytes(currentStats.ram.used)}
               </p>
-              <p className="text-muted-foreground text-xs sm:text-sm">Memory</p>
+              <p className="text-muted-foreground text-xs sm:text-sm">
+                Memory ({currentStats.ram.percentage.toFixed(1)}%)
+              </p>
               <p className="text-muted-foreground text-[10px] sm:text-xs">
-                / {formatBytes(server.resourceMetrics?.memoryTotal ?? 0)}
+                / {formatBytes(currentStats.ram.total)}
               </p>
             </div>
             <div className="rounded-lg bg-blue-500/20 p-2 sm:p-3">
@@ -74,7 +181,7 @@ const RouteComponent = () => {
           <div className="flex h-full items-center justify-between">
             <div className="flex h-full flex-col justify-center">
               <p className="text-base font-semibold sm:text-lg">
-                {formatBytes(server.resourceMetrics?.diskUsed ?? 0)}
+                {formatBytes(currentStats.disk.used)}
               </p>
               <p className="text-muted-foreground text-xs sm:text-sm">
                 Disk Used
@@ -90,16 +197,10 @@ const RouteComponent = () => {
           <div className="flex h-full items-center justify-between">
             <div className="flex h-full flex-col justify-center">
               <p className="text-xs font-semibold sm:text-sm">
-                ↑{" "}
-                {formatBytes(server.resourceMetrics?.networkSendBandwidth ?? 0)}
-                /s
+                ↑ {formatBytes(currentStats.network.uploadBytes)}/s
               </p>
               <p className="text-xs font-semibold sm:text-sm">
-                ↓{" "}
-                {formatBytes(
-                  server.resourceMetrics?.networkReceiveBandwidth ?? 0
-                )}
-                /s
+                ↓ {formatBytes(currentStats.network.downloadBytes)}/s
               </p>
               <p className="text-muted-foreground text-xs sm:text-sm">
                 Network
@@ -113,12 +214,32 @@ const RouteComponent = () => {
       </div>
 
       <div className="mt-4 sm:mt-6">
-        <ServerConsole server={server} />
+        <ServerConsole
+          server={{
+            ...server,
+            // Override with real-time server info if available
+            serverInfo: {
+              ...server.serverInfo,
+              status: currentStats.status,
+            },
+          }}
+        />
       </div>
     </>
   );
 };
 
 export const Route = createFileRoute("/_main/servers/$serverId/")({
+  loader: async ({ context, params }) => {
+    const logs = await context.queryClient.ensureQueryData(
+      orpc.atlas.getServerLogs.queryOptions({
+        input: {
+          server: params.serverId,
+        },
+      })
+    );
+
+    return { logs };
+  },
   component: RouteComponent,
 });

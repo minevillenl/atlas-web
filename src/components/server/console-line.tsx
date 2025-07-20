@@ -5,11 +5,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import React from "react";
 import { getLogType } from "@/lib/logs";
 import { cn } from "@/lib/utils";
 import { LogLine } from "@/types/console";
 
-const ConsoleLine = ({
+const ConsoleLine = React.memo(({
   line,
   noTimestamp,
 }: {
@@ -114,6 +115,8 @@ const ConsoleLine = ({
       </span>
     </div>
   );
-};
+});
+
+ConsoleLine.displayName = "ConsoleLine";
 
 export default ConsoleLine;

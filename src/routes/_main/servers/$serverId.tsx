@@ -1,3 +1,5 @@
+import { useState, useEffect } from "react";
+
 import { useQuery } from "@tanstack/react-query";
 import {
   Link,
@@ -16,6 +18,7 @@ import {
 
 import { getStatus } from "@/components/server-card";
 import { Button } from "@/components/ui/button";
+import { WebSocketProvider, useWebSocketContext } from "@/contexts/websocket-context";
 import { orpc } from "@/lib/orpc";
 import { seo } from "@/utils/seo";
 
@@ -28,7 +31,7 @@ const links = [
   {
     label: "Files",
     icon: FolderIcon,
-    to: "/servers/$serverId/files",
+    to: "/servers/$serverId/files/",
   },
   {
     label: "Players",
@@ -37,8 +40,10 @@ const links = [
   },
 ];
 
-const RouteComponent = () => {
+const ServerContent = () => {
   const { serverId } = Route.useParams();
+  const [realtimeServerInfo, setRealtimeServerInfo] = useState<any>(null);
+  const { sendMessage, isConnected, subscribe } = useWebSocketContext();
 
   const { data: server } = useQuery({
     ...orpc.atlas.getServer.queryOptions({
@@ -46,13 +51,45 @@ const RouteComponent = () => {
     }),
   });
 
+  // Subscribe to WebSocket messages
+  useEffect(() => {
+    const unsubscribe = subscribe((message) => {
+      if (message.type === "server-info") {
+        setRealtimeServerInfo(message.data);
+      } else if (message.type === "status-update") {
+        setRealtimeServerInfo((prev: any) => ({
+          ...prev,
+          status: message.data.status,
+          serverId: message.data.serverId,
+        }));
+      }
+    });
+
+    return unsubscribe;
+  }, [subscribe]);
+
+  // Subscribe to status updates when connected
+  useEffect(() => {
+    if (isConnected) {
+      // Add a small delay to ensure WebSocket is fully ready
+      setTimeout(() => {
+        sendMessage({
+          type: "subscribe",
+          streams: ["status"],
+          targets: [serverId],
+        });
+      }, 100);
+    }
+  }, [isConnected, sendMessage, serverId]);
+
   if (!server) {
     return <div>Loading...</div>;
   }
 
-  const status = server.serverInfo?.status ?? "UNKNOWN";
-  const isRunning = status === "RUNNING";
-  const isStopped = status === "STOPPED";
+  const currentStatus =
+    realtimeServerInfo?.status ?? server.serverInfo?.status ?? "UNKNOWN";
+  const isRunning = currentStatus === "RUNNING";
+  const isStopped = currentStatus === "STOPPED";
 
   return (
     <div className="flex flex-col gap-6">
@@ -60,7 +97,7 @@ const RouteComponent = () => {
         <div className="flex items-center gap-3">
           <div>
             <div className="flex items-center gap-2">
-              {getStatus(status)}
+              {getStatus(currentStatus)}
               <h1 className="text-2xl font-bold">{server.name}</h1>
             </div>
             <p className="text-muted-foreground text-sm">
@@ -98,13 +135,13 @@ const RouteComponent = () => {
       </div>
 
       <div className="flex gap-1 border-b">
-        {links.map((link) => (
+        {links.map((link, index) => (
           <Link
             key={link.label}
             to={link.to}
             params={{ serverId }}
             className="text-muted-foreground hover:text-foreground hover:border-muted-foreground border-b-2 border-transparent px-4 py-2 text-sm font-medium"
-            activeOptions={{ exact: true }}
+            activeOptions={{ exact: index === 0 }}
             activeProps={{
               className:
                 "!border-primary !text-primary !border-b-2 !px-4 !py-2 !text-sm !font-medium",
@@ -120,6 +157,15 @@ const RouteComponent = () => {
 
       <Outlet />
     </div>
+  );
+};
+
+const RouteComponent = () => {
+  const { serverId } = Route.useParams();
+  return (
+    <WebSocketProvider serverId={serverId}>
+      <ServerContent />
+    </WebSocketProvider>
   );
 };
 
