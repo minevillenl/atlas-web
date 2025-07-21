@@ -13,6 +13,7 @@ export default defineConfig({
       projects: ["./tsconfig.json"],
     }),
     tanstackStart({
+      target: "node-server",
       customViteReactPlugin: true,
       tsr: {
         quoteStyle: "double",
