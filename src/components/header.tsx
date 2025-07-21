@@ -7,9 +7,12 @@ import {
   Users,
 } from "lucide-react";
 
+import { useAuthedQuery } from "@/features/auth/services/auth.query";
 import { authClient } from "@/lib/auth-client";
 
 const Header = () => {
+  const { data: session } = useAuthedQuery();
+
   const links = [
     {
       name: "Overview",
@@ -66,10 +69,18 @@ const Header = () => {
 
             <div className="ml-auto flex items-center gap-4">
               <div className="relative">
-                <UserIcon
-                  onClick={() => authClient.signOut()}
-                  className="text-muted-foreground hover:text-foreground h-5 w-5 cursor-pointer"
-                />
+                {session.user.image ? (
+                  <img
+                    className="h-8 w-8 rounded-full transition-opacity hover:cursor-pointer hover:opacity-80"
+                    onClick={() => authClient.signOut()}
+                    src={session.user.image}
+                  />
+                ) : (
+                  <UserIcon
+                    onClick={() => authClient.signOut()}
+                    className="text-muted-foreground hover:text-foreground h-5 w-5 cursor-pointer"
+                  />
+                )}
               </div>
             </div>
           </div>

@@ -47,7 +47,6 @@ import {
   ServerLogsResponseSchema,
   ServerSchema,
   type ServersResponse,
-  ServersResponseSchema,
   type SystemMetrics,
   SystemMetricsSchema,
   type SystemStatus,
@@ -119,7 +118,7 @@ export class AtlasApiClient {
       }
     }
 
-    return this.request(url, {}, ServersResponseSchema);
+    return this.request(url, {});
   }
 
   async createServer(

@@ -11,10 +11,11 @@
 import { createServerRootRoute } from "@tanstack/react-start/server";
 
 import { Route as rootRouteImport } from "./routes/__root";
+import { Route as AdminRouteImport } from "./routes/admin";
 import { Route as MainRouteImport } from "./routes/_main";
 import { Route as AuthRouteImport } from "./routes/_auth";
+import { Route as AdminIndexRouteImport } from "./routes/admin/index";
 import { Route as MainIndexRouteImport } from "./routes/_main/index";
-import { Route as AuthRegisterRouteImport } from "./routes/_auth/register";
 import { Route as AuthLoginRouteImport } from "./routes/_auth/login";
 import { Route as MainServersIndexRouteImport } from "./routes/_main/servers/index";
 import { Route as MainGroupsIndexRouteImport } from "./routes/_main/groups/index";
@@ -33,6 +34,11 @@ import { ServerRoute as ApiAuthSplatServerRouteImport } from "./routes/api/auth/
 
 const rootServerRouteImport = createServerRootRoute();
 
+const AdminRoute = AdminRouteImport.update({
+  id: "/admin",
+  path: "/admin",
+  getParentRoute: () => rootRouteImport,
+} as any);
 const MainRoute = MainRouteImport.update({
   id: "/_main",
   getParentRoute: () => rootRouteImport,
@@ -41,15 +47,15 @@ const AuthRoute = AuthRouteImport.update({
   id: "/_auth",
   getParentRoute: () => rootRouteImport,
 } as any);
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: "/",
+  path: "/",
+  getParentRoute: () => AdminRoute,
+} as any);
 const MainIndexRoute = MainIndexRouteImport.update({
   id: "/",
   path: "/",
   getParentRoute: () => MainRoute,
-} as any);
-const AuthRegisterRoute = AuthRegisterRouteImport.update({
-  id: "/register",
-  path: "/register",
-  getParentRoute: () => AuthRoute,
 } as any);
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: "/login",
@@ -133,9 +139,10 @@ const ApiAuthSplatServerRoute = ApiAuthSplatServerRouteImport.update({
 } as any);
 
 export interface FileRoutesByFullPath {
+  "/admin": typeof AdminRouteWithChildren;
   "/login": typeof AuthLoginRoute;
-  "/register": typeof AuthRegisterRoute;
   "/": typeof MainIndexRoute;
+  "/admin/": typeof AdminIndexRoute;
   "/groups/$groupId": typeof MainGroupsGroupIdRoute;
   "/servers/$serverId": typeof MainServersServerIdRouteWithChildren;
   "/groups": typeof MainGroupsIndexRoute;
@@ -148,8 +155,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   "/login": typeof AuthLoginRoute;
-  "/register": typeof AuthRegisterRoute;
   "/": typeof MainIndexRoute;
+  "/admin": typeof AdminIndexRoute;
   "/groups/$groupId": typeof MainGroupsGroupIdRoute;
   "/groups": typeof MainGroupsIndexRoute;
   "/servers": typeof MainServersIndexRoute;
@@ -163,9 +170,10 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   "/_auth": typeof AuthRouteWithChildren;
   "/_main": typeof MainRouteWithChildren;
+  "/admin": typeof AdminRouteWithChildren;
   "/_auth/login": typeof AuthLoginRoute;
-  "/_auth/register": typeof AuthRegisterRoute;
   "/_main/": typeof MainIndexRoute;
+  "/admin/": typeof AdminIndexRoute;
   "/_main/groups/$groupId": typeof MainGroupsGroupIdRoute;
   "/_main/servers/$serverId": typeof MainServersServerIdRouteWithChildren;
   "/_main/groups/": typeof MainGroupsIndexRoute;
@@ -179,9 +187,10 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
+    | "/admin"
     | "/login"
-    | "/register"
     | "/"
+    | "/admin/"
     | "/groups/$groupId"
     | "/servers/$serverId"
     | "/groups"
@@ -194,8 +203,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo;
   to:
     | "/login"
-    | "/register"
     | "/"
+    | "/admin"
     | "/groups/$groupId"
     | "/groups"
     | "/servers"
@@ -208,9 +217,10 @@ export interface FileRouteTypes {
     | "__root__"
     | "/_auth"
     | "/_main"
+    | "/admin"
     | "/_auth/login"
-    | "/_auth/register"
     | "/_main/"
+    | "/admin/"
     | "/_main/groups/$groupId"
     | "/_main/servers/$serverId"
     | "/_main/groups/"
@@ -225,6 +235,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren;
   MainRoute: typeof MainRouteWithChildren;
+  AdminRoute: typeof AdminRouteWithChildren;
 }
 export interface FileServerRoutesByFullPath {
   "/api/$": typeof ApiSplatServerRoute;
@@ -282,6 +293,13 @@ export interface RootServerRouteChildren {
 
 declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
+    "/admin": {
+      id: "/admin";
+      path: "/admin";
+      fullPath: "/admin";
+      preLoaderRoute: typeof AdminRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     "/_main": {
       id: "/_main";
       path: "";
@@ -296,19 +314,19 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    "/admin/": {
+      id: "/admin/";
+      path: "/";
+      fullPath: "/admin/";
+      preLoaderRoute: typeof AdminIndexRouteImport;
+      parentRoute: typeof AdminRoute;
+    };
     "/_main/": {
       id: "/_main/";
       path: "/";
       fullPath: "/";
       preLoaderRoute: typeof MainIndexRouteImport;
       parentRoute: typeof MainRoute;
-    };
-    "/_auth/register": {
-      id: "/_auth/register";
-      path: "/register";
-      fullPath: "/register";
-      preLoaderRoute: typeof AuthRegisterRouteImport;
-      parentRoute: typeof AuthRoute;
     };
     "/_auth/login": {
       id: "/_auth/login";
@@ -424,12 +442,10 @@ declare module "@tanstack/react-start/server" {
 
 interface AuthRouteChildren {
   AuthLoginRoute: typeof AuthLoginRoute;
-  AuthRegisterRoute: typeof AuthRegisterRoute;
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthLoginRoute: AuthLoginRoute,
-  AuthRegisterRoute: AuthRegisterRoute,
 };
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren);
@@ -471,9 +487,20 @@ const MainRouteChildren: MainRouteChildren = {
 
 const MainRouteWithChildren = MainRoute._addFileChildren(MainRouteChildren);
 
+interface AdminRouteChildren {
+  AdminIndexRoute: typeof AdminIndexRoute;
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminIndexRoute: AdminIndexRoute,
+};
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren);
+
 const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
   MainRoute: MainRouteWithChildren,
+  AdminRoute: AdminRouteWithChildren,
 };
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
