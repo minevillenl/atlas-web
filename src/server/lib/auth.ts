@@ -34,7 +34,6 @@ export const auth = betterAuth({
         );
 
         const guildMemberData = await guildMember.json();
-        console.log(guildMemberData);
 
         const roles = guildMemberData.roles as string[];
         const oneOfRoles = env.DISCORD_SERVER_ROLES.split(",").some((role) =>
