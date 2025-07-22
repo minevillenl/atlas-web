@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useServerDownloadFileMutation } from "@/hooks/mutations/use-server-download-file-mutation";
-import { isFileEditable } from "@/lib/utils";
+import { isFileEditableByNameAndType } from "@/lib/utils";
 import { FileItem } from "@/server/lib/atlas-api/atlas-api.schemas";
 
 interface FileActionsDropdownProps {
@@ -58,7 +58,7 @@ export function FileActionsDropdown({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {file.file && isFileEditable(file.mimeType) && (
+        {file.file && isFileEditableByNameAndType(file.name, file.mimeType) && (
           <DropdownMenuItem
             onClick={(e) => {
               e.stopPropagation();

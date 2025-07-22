@@ -177,6 +177,9 @@ export const EDITABLE_MIME_TYPES = [
   "text/markdown",
   "text/x-markdown",
   "application/x-markdown",
+  
+  // Generic binary (often misdetected text files)
+  "application/octet-stream",
 ] as const;
 
 /**
@@ -184,4 +187,27 @@ export const EDITABLE_MIME_TYPES = [
  */
 export function isFileEditable(mimeType: string): boolean {
   return EDITABLE_MIME_TYPES.includes(mimeType as any);
+}
+
+/**
+ * Check if a file is editable based on its MIME type and name
+ */
+export function isFileEditableByNameAndType(fileName: string, mimeType: string): boolean {
+  // First check if MIME type is editable
+  if (isFileEditable(mimeType)) return true;
+  
+  // If MIME type is generic binary, check file extension
+  if (mimeType === "application/octet-stream") {
+    const extension = fileName.split(".").pop()?.toLowerCase();
+    const editableExtensions = [
+      "txt", "md", "json", "xml", "yaml", "yml", "toml", "ini", "cfg", "conf",
+      "env", "properties", "sh", "bash", "zsh", "fish", "py", "js", "jsx",
+      "ts", "tsx", "html", "htm", "css", "scss", "sass", "less", "java",
+      "c", "cpp", "cc", "cxx", "cs", "go", "rs", "php", "rb", "pl", "lua",
+      "sql", "dockerfile", "makefile", "mk", "log"
+    ];
+    return editableExtensions.includes(extension || "");
+  }
+  
+  return false;
 }

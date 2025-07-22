@@ -4,7 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { File, Folder, Upload } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { isFileEditable } from "@/lib/utils";
+import { isFileEditableByNameAndType } from "@/lib/utils";
 import { FileItem } from "@/server/lib/atlas-api/atlas-api.schemas";
 
 import { FileActionsDropdown } from "./file-actions-dropdown";
@@ -37,7 +37,7 @@ const formatDate = (dateString: string): string => {
 
 const isEditable = (file: FileItem): boolean => {
   if (!file.file) return false;
-  return isFileEditable(file.mimeType);
+  return isFileEditableByNameAndType(file.name, file.mimeType);
 };
 
 interface FileTableProps {

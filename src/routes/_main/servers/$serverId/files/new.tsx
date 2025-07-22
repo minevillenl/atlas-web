@@ -41,6 +41,7 @@ const getLanguageFromFileName = (fileName: string): string => {
     ini: "ini",
     cfg: "ini",
     conf: "ini",
+    env: "ini",
     properties: "properties",
     sh: "shell",
     bash: "shell",

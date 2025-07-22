@@ -11,6 +11,8 @@ export const env = createEnv({
     DISCORD_CLIENT_SECRET: z.string().min(1),
     DISCORD_SERVER_ID: z.string().min(1),
     DISCORD_SERVER_ROLES: z.string().min(1),
+    IDENTITY_CLIENT_ID: z.string().min(1),
+    IDENTITY_CLIENT_SECRET: z.string().min(1),
   },
 
   /**

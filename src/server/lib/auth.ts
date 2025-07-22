@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { APIError } from "better-auth/api";
+import { genericOAuth } from "better-auth/plugins";
 
 import { db } from "@/db";
 import { env } from "@/env";
@@ -13,51 +13,19 @@ export const auth = betterAuth({
   // emailAndPassword: {
   //   enabled: true,
   // },
-  socialProviders: {
-    discord: {
-      clientId: env.DISCORD_CLIENT_ID,
-      clientSecret: env.DISCORD_CLIENT_SECRET,
-      getUserInfo: async (token) => {
-        const response = await fetch("https://discord.com/api/users/@me", {
-          headers: {
-            Authorization: `Bearer ${token.accessToken}`,
-          },
-        });
-
-        const guildMember = await fetch(
-          `https://discord.com/api/users/@me/guilds/${env.DISCORD_SERVER_ID}/member`,
-          {
-            headers: {
-              Authorization: `Bearer ${token.accessToken}`,
-            },
-          }
-        );
-
-        const guildMemberData = await guildMember.json();
-
-        const roles = guildMemberData.roles as string[];
-        const oneOfRoles = env.DISCORD_SERVER_ROLES.split(",").some((role) =>
-          roles.includes(role)
-        );
-
-        if (!oneOfRoles) {
-          throw new APIError("UNAUTHORIZED", {
-            message: "You are not authorized to access Atlas.",
-          });
-        }
-
-        const data = await response.json();
-        return {
-          user: {
-            id: data.id as string,
-            name: data.global_name as string,
-            email: data.email as string,
-            image: data.avatar as string,
-            emailVerified: true,
-          },
-          data: data,
-        };
-      },
-    },
-  },
+  plugins: [
+    genericOAuth({
+      config: [
+        {
+          providerId: "identity",
+          clientId: env.IDENTITY_CLIENT_ID,
+          clientSecret: env.IDENTITY_CLIENT_SECRET,
+          authorizationUrl: "https://identity.dustydunes.net/authorize",
+          tokenUrl: "https://identity.dustydunes.net/api/oidc/token",
+          userInfoUrl: "https://identity.dustydunes.net/api/oidc/userinfo",
+          scopes: ["openid", "profile", "email", "groups"],
+        },
+      ],
+    }),
+  ],
 });
