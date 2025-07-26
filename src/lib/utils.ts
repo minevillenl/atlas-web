@@ -6,37 +6,37 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export const GROUP_COLORS = [
-  "#3B82F6",
-  "#10B981",
-  "#F59E0B",
-  "#8B5CF6",
-  "#EC4899",
-  "#14B8A6",
-  "#6366F1",
-  "#F59E0B",
-  "#EF4444",
-  "#EAB308",
-  "#06B6D4",
-  "#7C3AED",
-  "#F43F5E",
-  "#A855F7",
-  "#0EA5E9",
-  "#84CC16",
-  "#059669",
-  "#FCD34D",
-  "#DC2626",
+  "#60A5FA",
+  "#34D399",
+  "#FBBF24",
   "#A78BFA",
   "#F472B6",
-  "#FB923C",
+  "#2DD4BF",
+  "#818CF8",
+  "#F59E42",
+  "#F87171",
+  "#FDE047",
+  "#38BDF8",
+  "#C4B5FD",
+  "#FB7185",
+  "#F0ABFC",
+  "#7DD3FC",
+  "#BBF7D0",
   "#4ADE80",
-  "#22D3EE",
-  "#60A5FA",
-  "#C084FC",
+  "#FCD34D",
+  "#FCA5A5",
+  "#DDD6FE",
+  "#F9A8D4",
+  "#FDBA74",
+  "#86EFAC",
+  "#67E8F9",
+  "#93C5FD",
+  "#E9D5FF",
   "#F87171",
   "#FBBF24",
   "#34D399",
-  "#38BDF8",
-  "#818CF8",
+  "#7DD3FC",
+  "#A5B4FC",
   "#E879F9",
   "#FB7185",
   "#FDE047",
@@ -81,30 +81,30 @@ export const GROUP_COLORS = [
   "#E2E8F0",
   "#F1F5F9",
   "#F8FAFC",
-  "#1E40AF",
-  "#166534",
-  "#B45309",
-  "#6B21A8",
-  "#BE123C",
-  "#0F766E",
-  "#4338CA",
-  "#DC2626",
-  "#E11D48",
-  "#365314",
-  "#0E7490",
-  "#581C87",
-  "#BE185D",
-  "#6D28D9",
-  "#0369A1",
-  "#4D7C0F",
-  "#047857",
-  "#B91C1C",
-  "#C084FC",
+  "#60A5FA",
+  "#4ADE80",
+  "#FBBF24",
+  "#A78BFA",
+  "#F87171",
+  "#2DD4BF",
+  "#818CF8",
+  "#F87171",
+  "#FB7185",
+  "#BBF7D0",
+  "#7DD3FC",
+  "#C4B5FD",
+  "#F9A8D4",
+  "#A5B4FC",
+  "#7DD3FC",
+  "#4ADE80",
+  "#86EFAC",
+  "#FCA5A5",
+  "#C4B5FD",
   "#F97316",
-  "#65A30D",
-  "#0D9488",
-  "#0284C7",
-  "#4F46E5",
+  "#BBF7D0",
+  "#7DD3FC",
+  "#38BDF8",
+  "#C4B5FD",
 ];
 
 /**
@@ -149,7 +149,7 @@ export const EDITABLE_MIME_TYPES = [
   "text/x-sql",
   "text/x-dockerfile",
   "text/x-makefile",
-  
+
   // Application types that are text-based
   "application/json",
   "application/xml",
@@ -167,17 +167,17 @@ export const EDITABLE_MIME_TYPES = [
   "application/x-httpd-php",
   "application/sql",
   "application/x-sql",
-  
+
   // Configuration files
   "application/x-nginx-conf",
   "application/x-apache-conf",
   "application/x-systemd-unit",
-  
+
   // Markup and markdown
   "text/markdown",
   "text/x-markdown",
   "application/x-markdown",
-  
+
   // Generic binary (often misdetected text files)
   "application/octet-stream",
 ] as const;
@@ -192,22 +192,64 @@ export function isFileEditable(mimeType: string): boolean {
 /**
  * Check if a file is editable based on its MIME type and name
  */
-export function isFileEditableByNameAndType(fileName: string, mimeType: string): boolean {
+export function isFileEditableByNameAndType(
+  fileName: string,
+  mimeType: string
+): boolean {
   // First check if MIME type is editable
   if (isFileEditable(mimeType)) return true;
-  
+
   // If MIME type is generic binary, check file extension
   if (mimeType === "application/octet-stream") {
     const extension = fileName.split(".").pop()?.toLowerCase();
     const editableExtensions = [
-      "txt", "md", "json", "xml", "yaml", "yml", "toml", "ini", "cfg", "conf",
-      "env", "properties", "sh", "bash", "zsh", "fish", "py", "js", "jsx",
-      "ts", "tsx", "html", "htm", "css", "scss", "sass", "less", "java",
-      "c", "cpp", "cc", "cxx", "cs", "go", "rs", "php", "rb", "pl", "lua",
-      "sql", "dockerfile", "makefile", "mk", "log"
+      "txt",
+      "md",
+      "json",
+      "xml",
+      "yaml",
+      "yml",
+      "toml",
+      "ini",
+      "cfg",
+      "conf",
+      "env",
+      "properties",
+      "sh",
+      "bash",
+      "zsh",
+      "fish",
+      "py",
+      "js",
+      "jsx",
+      "ts",
+      "tsx",
+      "html",
+      "htm",
+      "css",
+      "scss",
+      "sass",
+      "less",
+      "java",
+      "c",
+      "cpp",
+      "cc",
+      "cxx",
+      "cs",
+      "go",
+      "rs",
+      "php",
+      "rb",
+      "pl",
+      "lua",
+      "sql",
+      "dockerfile",
+      "makefile",
+      "mk",
+      "log",
     ];
     return editableExtensions.includes(extension || "");
   }
-  
+
   return false;
 }

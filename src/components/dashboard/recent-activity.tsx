@@ -1,23 +1,49 @@
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircle } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import {
+  AlertCircle,
+  AlertTriangle,
+  Archive,
+  ChevronRight,
+  Power,
+  RotateCcw,
+  TrendingDown,
+  TrendingUp,
+  UserMinus,
+  Users,
+} from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { orpc } from "@/lib/orpc";
+import { getGroupColor } from "@/lib/utils";
 import type { Activity } from "@/server/lib/atlas-api/atlas-api.schemas";
 
-const getActivityIcon = (activityType: Activity["activityType"]) => {
-  switch (activityType) {
+const getActivityIcon = (activity: Activity) => {
+  const iconClass = "h-4 w-4";
+
+  switch (activity.activityType) {
     case "SCALING_OPERATION":
-      return <div className="h-2 w-2 rounded-full bg-green-500"></div>;
+      if (activity.metadata?.direction === "up") {
+        return <TrendingUp className={iconClass} />;
+      } else {
+        return <TrendingDown className={iconClass} />;
+      }
     case "PLAYER_SURGE":
-      return <div className="h-2 w-2 rounded-full bg-blue-500"></div>;
+      return <Users className={iconClass} />;
+    case "PLAYER_DROP":
+      return <UserMinus className={iconClass} />;
+    case "CAPACITY_REACHED":
+      return <AlertTriangle className={iconClass} />;
+    case "BACKUP_OPERATION":
+      return <Archive className={iconClass} />;
     case "SERVER_RESTART":
-      return <div className="h-2 w-2 rounded-full bg-purple-500"></div>;
+      return <RotateCcw className={iconClass} />;
     case "ATLAS_LIFECYCLE":
-      return <div className="h-2 w-2 rounded-full bg-orange-500"></div>;
+      return <Power className={iconClass} />;
     default:
-      return <div className="h-2 w-2 rounded-full bg-gray-500"></div>;
+      return <div className="h-2 w-2 rounded-full bg-current"></div>;
   }
 };
 
@@ -39,49 +65,115 @@ const formatTimeAgo = (timestamp: string): string => {
   return `${diffDays}d`;
 };
 
-const getActivitySummary = (activity: Activity): string => {
-  if (!activity.metadata) return "";
+const formatTriggerReason = (reason: string): string => {
+  if (!reason) return "";
+
+  const formatted = reason
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (l) => l.toUpperCase());
+
+  // Make specific improvements
+  return formatted
+    .replace("Minimum Servers Enforcement", "Maintaining minimum servers")
+    .replace("Maximum Servers Enforcement", "Maintaining maximum servers")
+    .replace("Scale Up Threshold", "High utilization")
+    .replace("Scale Down Threshold", "Low utilization");
+};
+
+const getActivityDetails = (activity: Activity) => {
+  if (!activity.metadata) return { summary: "", details: "" };
 
   try {
     const metadata = activity.metadata;
 
     switch (activity.activityType) {
       case "SCALING_OPERATION":
-        if (metadata.direction === "up") {
-          const diff = metadata.servers_after - metadata.servers_before;
-          return `+${diff} servers`;
-        } else if (metadata.direction === "down") {
-          const diff = metadata.servers_before - metadata.servers_after;
-          return `-${diff} servers`;
-        }
-        return "scaled";
+        const beforeCount = metadata.servers_before || 0;
+        const afterCount = metadata.servers_after || 0;
+        const diff = afterCount - beforeCount;
+        const direction = metadata.direction === "up" ? "+" : "-";
+
+        return {
+          summary: `${beforeCount} → ${afterCount} servers`,
+          details:
+            formatTriggerReason(metadata.trigger_reason) ||
+            "Auto-scaling triggered",
+          badge: `${direction}${Math.abs(diff)}`,
+        };
       case "PLAYER_SURGE":
         const playerDiff =
           metadata.newPlayerCount - metadata.previousPlayerCount;
-        return `+${playerDiff} players`;
+        return {
+          summary: `${metadata.previousPlayerCount} → ${metadata.newPlayerCount} players`,
+          details: `Surge detected in ${metadata.timeWindow || "5m"}`,
+          badge: `+${playerDiff}`,
+        };
+      case "PLAYER_DROP":
+        const dropDiff = metadata.previousPlayerCount - metadata.newPlayerCount;
+        return {
+          summary: `${metadata.previousPlayerCount} → ${metadata.newPlayerCount} players`,
+          details: `Drop detected in ${metadata.timeWindow || "5m"}`,
+          badge: `-${dropDiff}`,
+        };
+      case "CAPACITY_REACHED":
+        return {
+          summary: `${metadata.newPlayerCount}/${metadata.capacity} players`,
+          details: "Server at maximum capacity",
+          badge: "FULL",
+        };
+      case "BACKUP_OPERATION":
+        const success = metadata.success !== false;
+        const size = metadata.backupSize
+          ? `${Math.round(metadata.backupSize / 1024 / 1024)}MB`
+          : "";
+        return {
+          summary: success ? `Backup completed ${size}` : "Backup failed",
+          details: metadata.jobName || "Scheduled backup",
+          badge: success ? "SUCCESS" : "FAILED",
+        };
       case "SERVER_RESTART":
-        return metadata.reason || "restarted";
+        return {
+          summary: metadata.reason || "Manual restart",
+          details: metadata.previousUptime
+            ? `Uptime: ${metadata.previousUptime}`
+            : "",
+          badge: "RESTART",
+        };
       case "ATLAS_LIFECYCLE":
-        return "system event";
+        return {
+          summary: "System event",
+          details: "Atlas lifecycle change",
+          badge: "SYSTEM",
+        };
       default:
-        return "";
+        return { summary: "", details: "", badge: "" };
     }
   } catch {
-    return "";
+    return { summary: "", details: "", badge: "" };
   }
 };
 
 const SkeletonActivityItem = () => (
-  <div className="flex items-center gap-3 rounded p-3">
-    <div className="flex-shrink-0">
-      <Skeleton className="h-2 w-2 rounded-full" />
-    </div>
-    <div className="min-w-0 flex-1">
-      <div className="flex items-center justify-between">
-        <Skeleton className="mb-2 h-4 w-3/4" />
+  <div className="bg-muted/50 rounded-lg p-4">
+    <div className="mb-3 flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-9 w-9 rounded-lg" />
+        <div>
+          <Skeleton className="mb-1 h-4 w-24" />
+          <Skeleton className="h-3 w-16" />
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-5 w-12 rounded-full" />
         <Skeleton className="h-3 w-8" />
       </div>
-      <Skeleton className="h-3 w-1/2" />
+    </div>
+    <div className="space-y-2">
+      <Skeleton className="h-4 w-3/4" />
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-3 w-1/2" />
+        <Skeleton className="h-3 w-12" />
+      </div>
     </div>
   </div>
 );
@@ -92,18 +184,37 @@ export default function RecentActivity() {
     refetchInterval: 30000,
   });
 
+  const { data: groupsData } = useQuery({
+    ...orpc.atlas.groupList.queryOptions(),
+  });
+
   const activities = activitiesData?.data || [];
+  const groups = groupsData || [];
+
+  const getGroupInternalName = (displayName: string): string => {
+    const group = groups.find(
+      (g) => g.displayName === displayName || g.name === displayName
+    );
+    return group?.name || displayName;
+  };
 
   return (
     <Card className="p-6">
-      <h2 className="text-lg font-semibold">Recent Activity</h2>
-      <div className="space-y-0">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Recent Activity</h2>
+        <Link
+          to="/activity"
+          className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-sm transition-colors"
+        >
+          View all
+          <ChevronRight className="h-4 w-4" />
+        </Link>
+      </div>
+      <div className="space-y-4">
         {isPending ? (
           <>
             <SkeletonActivityItem />
-            <div className="bg-border/30 my-2 h-px"></div>
             <SkeletonActivityItem />
-            <div className="bg-border/30 my-2 h-px"></div>
             <SkeletonActivityItem />
           </>
         ) : activities.length === 0 ? (
@@ -112,33 +223,98 @@ export default function RecentActivity() {
             <p>No recent activity</p>
           </div>
         ) : (
-          activities.map((activity, index) => (
-            <div key={activity.id}>
-              <div className="hover:bg-muted/30 flex items-center gap-3 rounded p-3 transition-colors">
-                <div className="flex-shrink-0">
-                  {getActivityIcon(activity.activityType)}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between">
-                    <p className="truncate text-sm font-medium">
-                      {activity.groupName
-                        ? `${activity.groupName} scaled ${activity.metadata?.direction || ""}`
-                        : activity.description}
-                    </p>
-                    <span className="text-muted-foreground ml-2 text-xs">
+          activities.map((activity) => {
+            const details = getActivityDetails(activity);
+            const internalGroupName = activity.groupName
+              ? getGroupInternalName(activity.groupName)
+              : undefined;
+            const groupColor = internalGroupName
+              ? getGroupColor(internalGroupName)
+              : undefined;
+
+            return (
+              <div
+                key={activity.id}
+                className="bg-muted/50 hover:bg-muted/70 rounded-lg p-4 transition-all duration-200"
+              >
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`rounded-lg p-2 ${
+                        groupColor
+                          ? ""
+                          : "bg-primary/20 text-primary"
+                      }`}
+                      style={
+                        groupColor
+                          ? {
+                              backgroundColor: `${groupColor}20`,
+                              color: groupColor,
+                            }
+                          : undefined
+                      }
+                    >
+                      {getActivityIcon(activity)}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">
+                        {activity.activityType
+                          .replace(/_/g, " ")
+                          .toLowerCase()
+                          .replace(/\b\w/g, (l) => l.toUpperCase())}
+                      </p>
+                      {activity.groupName && (
+                        <p 
+                          className={`text-xs ${
+                            groupColor ? "" : "text-primary"
+                          }`}
+                          style={groupColor ? { color: groupColor } : undefined}
+                        >
+                          {activity.groupName}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {details.badge && (
+                      <Badge
+                        variant={
+                          details.badge.includes("+") ||
+                          details.badge === "SUCCESS" ||
+                          details.badge === "SURGE"
+                            ? "success"
+                            : details.badge.includes("-") ||
+                                details.badge === "FAILED" ||
+                                details.badge === "FULL"
+                              ? "destructive"
+                              : "secondary"
+                        }
+                        className="text-xs"
+                      >
+                        {details.badge}
+                      </Badge>
+                    )}
+                    <span className="text-muted-foreground text-xs">
                       {formatTimeAgo(activity.timestamp)}
                     </span>
                   </div>
-                  <p className="text-muted-foreground text-xs">
-                    {getActivitySummary(activity)}
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm">
+                    {details.summary || activity.description}
                   </p>
+                  <div className="text-muted-foreground flex items-center justify-between text-xs">
+                    <span>
+                      {details.details ||
+                        `Triggered by ${activity.triggeredBy}`}
+                    </span>
+                    <span className="capitalize">{activity.triggeredBy}</span>
+                  </div>
                 </div>
               </div>
-              {index < activities.length - 1 && (
-                <div className="bg-border/30 my-2 h-px"></div>
-              )}
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </Card>

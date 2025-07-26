@@ -465,7 +465,10 @@ export const ActivityTypeSchema = z.enum([
   "ATLAS_LIFECYCLE",
   "SCALING_OPERATION", 
   "SERVER_RESTART",
-  "PLAYER_SURGE"
+  "PLAYER_SURGE",
+  "BACKUP_OPERATION",
+  "PLAYER_DROP",
+  "CAPACITY_REACHED"
 ]);
 
 export const ActivitySchema = z.object({

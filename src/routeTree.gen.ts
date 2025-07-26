@@ -16,6 +16,7 @@ import { Route as MainRouteImport } from "./routes/_main";
 import { Route as AuthRouteImport } from "./routes/_auth";
 import { Route as AdminIndexRouteImport } from "./routes/admin/index";
 import { Route as MainIndexRouteImport } from "./routes/_main/index";
+import { Route as MainActivityRouteImport } from "./routes/_main/activity";
 import { Route as AuthLoginRouteImport } from "./routes/_auth/login";
 import { Route as MainServersIndexRouteImport } from "./routes/_main/servers/index";
 import { Route as MainGroupsIndexRouteImport } from "./routes/_main/groups/index";
@@ -55,6 +56,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
 const MainIndexRoute = MainIndexRouteImport.update({
   id: "/",
   path: "/",
+  getParentRoute: () => MainRoute,
+} as any);
+const MainActivityRoute = MainActivityRouteImport.update({
+  id: "/activity",
+  path: "/activity",
   getParentRoute: () => MainRoute,
 } as any);
 const AuthLoginRoute = AuthLoginRouteImport.update({
@@ -141,6 +147,7 @@ const ApiAuthSplatServerRoute = ApiAuthSplatServerRouteImport.update({
 export interface FileRoutesByFullPath {
   "/admin": typeof AdminRouteWithChildren;
   "/login": typeof AuthLoginRoute;
+  "/activity": typeof MainActivityRoute;
   "/": typeof MainIndexRoute;
   "/admin/": typeof AdminIndexRoute;
   "/groups/$groupId": typeof MainGroupsGroupIdRoute;
@@ -155,6 +162,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   "/login": typeof AuthLoginRoute;
+  "/activity": typeof MainActivityRoute;
   "/": typeof MainIndexRoute;
   "/admin": typeof AdminIndexRoute;
   "/groups/$groupId": typeof MainGroupsGroupIdRoute;
@@ -172,6 +180,7 @@ export interface FileRoutesById {
   "/_main": typeof MainRouteWithChildren;
   "/admin": typeof AdminRouteWithChildren;
   "/_auth/login": typeof AuthLoginRoute;
+  "/_main/activity": typeof MainActivityRoute;
   "/_main/": typeof MainIndexRoute;
   "/admin/": typeof AdminIndexRoute;
   "/_main/groups/$groupId": typeof MainGroupsGroupIdRoute;
@@ -189,6 +198,7 @@ export interface FileRouteTypes {
   fullPaths:
     | "/admin"
     | "/login"
+    | "/activity"
     | "/"
     | "/admin/"
     | "/groups/$groupId"
@@ -203,6 +213,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo;
   to:
     | "/login"
+    | "/activity"
     | "/"
     | "/admin"
     | "/groups/$groupId"
@@ -219,6 +230,7 @@ export interface FileRouteTypes {
     | "/_main"
     | "/admin"
     | "/_auth/login"
+    | "/_main/activity"
     | "/_main/"
     | "/admin/"
     | "/_main/groups/$groupId"
@@ -326,6 +338,13 @@ declare module "@tanstack/react-router" {
       path: "/";
       fullPath: "/";
       preLoaderRoute: typeof MainIndexRouteImport;
+      parentRoute: typeof MainRoute;
+    };
+    "/_main/activity": {
+      id: "/_main/activity";
+      path: "/activity";
+      fullPath: "/activity";
+      preLoaderRoute: typeof MainActivityRouteImport;
       parentRoute: typeof MainRoute;
     };
     "/_auth/login": {
@@ -470,6 +489,7 @@ const MainServersServerIdRouteWithChildren =
   MainServersServerIdRoute._addFileChildren(MainServersServerIdRouteChildren);
 
 interface MainRouteChildren {
+  MainActivityRoute: typeof MainActivityRoute;
   MainIndexRoute: typeof MainIndexRoute;
   MainGroupsGroupIdRoute: typeof MainGroupsGroupIdRoute;
   MainServersServerIdRoute: typeof MainServersServerIdRouteWithChildren;
@@ -478,6 +498,7 @@ interface MainRouteChildren {
 }
 
 const MainRouteChildren: MainRouteChildren = {
+  MainActivityRoute: MainActivityRoute,
   MainIndexRoute: MainIndexRoute,
   MainGroupsGroupIdRoute: MainGroupsGroupIdRoute,
   MainServersServerIdRoute: MainServersServerIdRouteWithChildren,
