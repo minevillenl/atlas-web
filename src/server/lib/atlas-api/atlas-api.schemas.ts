@@ -460,3 +460,38 @@ export type ChunkedUploadStartRequest = z.infer<typeof ChunkedUploadStartRequest
 export type ChunkedUploadStartResponse = z.infer<typeof ChunkedUploadStartResponseSchema>;
 export type ChunkedUploadChunkResponse = z.infer<typeof ChunkedUploadChunkResponseSchema>;
 export type ChunkedUploadCompleteResponse = z.infer<typeof ChunkedUploadCompleteResponseSchema>;
+
+export const ActivityTypeSchema = z.enum([
+  "ATLAS_LIFECYCLE",
+  "SCALING_OPERATION", 
+  "SERVER_RESTART",
+  "PLAYER_SURGE"
+]);
+
+export const ActivitySchema = z.object({
+  id: z.string(),
+  serverId: z.string().nullable(),
+  serverName: z.string().nullable(),
+  groupName: z.string().nullable(),
+  activityType: ActivityTypeSchema,
+  timestamp: z.string(),
+  triggeredBy: z.string(),
+  description: z.string(),
+  metadata: z.any().nullable(),
+});
+
+export const ActivityFiltersSchema = z.object({
+  limit: z.number().min(1).max(200).optional(),
+  offset: z.number().min(0).optional(),
+});
+
+export const ActivitiesResponseSchema = z.object({
+  status: z.string(),
+  data: z.array(ActivitySchema),
+  timestamp: z.number(),
+});
+
+export type ActivityType = z.infer<typeof ActivityTypeSchema>;
+export type Activity = z.infer<typeof ActivitySchema>;
+export type ActivityFilters = z.infer<typeof ActivityFiltersSchema>;
+export type ActivitiesResponse = z.infer<typeof ActivitiesResponseSchema>;

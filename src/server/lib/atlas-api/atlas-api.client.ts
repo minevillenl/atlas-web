@@ -1,6 +1,9 @@
 import { env } from "@/env";
 
 import {
+  type ActivitiesResponse,
+  ActivitiesResponseSchema,
+  type ActivityFilters,
   type ApiResponse,
   ApiResponseSchema,
   type ChunkedUploadChunkResponse,
@@ -533,6 +536,57 @@ export class AtlasApiClient {
 
     return ws;
   }
+
+  async getRecentActivities(filters?: ActivityFilters): Promise<ActivitiesResponse> {
+    let url = "/api/v1/activity/recent";
+    
+    if (filters) {
+      const params = new URLSearchParams();
+      if (filters.limit) params.append("limit", filters.limit.toString());
+      if (filters.offset) params.append("offset", filters.offset.toString());
+      
+      const queryString = params.toString();
+      if (queryString) {
+        url += `?${queryString}`;
+      }
+    }
+    
+    return this.request(url, {}, ActivitiesResponseSchema);
+  }
+
+  async getServerActivities(serverId: string, filters?: ActivityFilters): Promise<ActivitiesResponse> {
+    let url = `/api/v1/activity/servers/${serverId}`;
+    
+    if (filters) {
+      const params = new URLSearchParams();
+      if (filters.limit) params.append("limit", filters.limit.toString());
+      if (filters.offset) params.append("offset", filters.offset.toString());
+      
+      const queryString = params.toString();
+      if (queryString) {
+        url += `?${queryString}`;
+      }
+    }
+    
+    return this.request(url, {}, ActivitiesResponseSchema);
+  }
+
+  async getGroupActivities(groupName: string, filters?: ActivityFilters): Promise<ActivitiesResponse> {
+    let url = `/api/v1/activity/groups/${groupName}`;
+    
+    if (filters) {
+      const params = new URLSearchParams();
+      if (filters.limit) params.append("limit", filters.limit.toString());
+      if (filters.offset) params.append("offset", filters.offset.toString());
+      
+      const queryString = params.toString();
+      if (queryString) {
+        url += `?${queryString}`;
+      }
+    }
+    
+    return this.request(url, {}, ActivitiesResponseSchema);
+  }
 }
 
 let atlasClient: AtlasApiClient | null = null;
@@ -604,6 +658,12 @@ const atlas = {
   generateWebSocketToken: (id: string) =>
     getAtlasClient().generateWebSocketToken(id),
   connectToServer: (id: string) => getAtlasClient().connectToServer(id),
+  getRecentActivities: (filters?: ActivityFilters) =>
+    getAtlasClient().getRecentActivities(filters),
+  getServerActivities: (serverId: string, filters?: ActivityFilters) =>
+    getAtlasClient().getServerActivities(serverId, filters),
+  getGroupActivities: (groupName: string, filters?: ActivityFilters) =>
+    getAtlasClient().getGroupActivities(groupName, filters),
 };
 
 export default atlas;

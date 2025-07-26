@@ -422,6 +422,61 @@ const getWebSocketToken = os
     };
   });
 
+const activityFiltersInputSchema = z.object({
+  limit: z.number().min(1).max(200).optional(),
+  offset: z.number().min(0).optional(),
+});
+
+const getRecentActivities = os
+  .input(activityFiltersInputSchema)
+  .handler(async ({ input }) => {
+    const request = getWebRequest();
+    const session = await auth.api.getSession({
+      headers: request?.headers ?? new Headers(),
+    });
+
+    if (!session) {
+      throw new ORPCError("UNAUTHORIZED", { message: "Unauthorized" });
+    }
+
+    const activities = await atlas.getRecentActivities(input);
+    return activities;
+  });
+
+const getServerActivities = os
+  .input(activityFiltersInputSchema.extend({ server: z.string() }))
+  .handler(async ({ input }) => {
+    const request = getWebRequest();
+    const session = await auth.api.getSession({
+      headers: request?.headers ?? new Headers(),
+    });
+
+    if (!session) {
+      throw new ORPCError("UNAUTHORIZED", { message: "Unauthorized" });
+    }
+
+    const { server, ...filters } = input;
+    const activities = await atlas.getServerActivities(server, filters);
+    return activities;
+  });
+
+const getGroupActivities = os
+  .input(activityFiltersInputSchema.extend({ group: z.string() }))
+  .handler(async ({ input }) => {
+    const request = getWebRequest();
+    const session = await auth.api.getSession({
+      headers: request?.headers ?? new Headers(),
+    });
+
+    if (!session) {
+      throw new ORPCError("UNAUTHORIZED", { message: "Unauthorized" });
+    }
+
+    const { group, ...filters } = input;
+    const activities = await atlas.getGroupActivities(group, filters);
+    return activities;
+  });
+
 export default {
   serverList,
   getServer,
@@ -446,4 +501,7 @@ export default {
   uploadServerFile,
   executeServerCommand,
   getWebSocketToken,
+  getRecentActivities,
+  getServerActivities,
+  getGroupActivities,
 };
