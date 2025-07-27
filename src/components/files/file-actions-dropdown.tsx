@@ -9,17 +9,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useServerDownloadFileMutation } from "@/hooks/mutations/use-server-download-file-mutation";
+import { useTemplateDownloadFileMutation } from "@/hooks/mutations/use-template-download-file-mutation";
 import { isFileEditableByNameAndType } from "@/lib/utils";
 import { FileItem } from "@/server/lib/atlas-api/atlas-api.schemas";
 
 interface FileActionsDropdownProps {
   file: FileItem;
-  serverId: string;
+  serverId?: string;
   currentPath: string;
   onEdit: (_file: FileItem) => void;
   onRename: (_file: FileItem) => void;
   onMove: (_file: FileItem) => void;
   onDelete: (_file: FileItem) => void;
+  isTemplate?: boolean;
 }
 
 export function FileActionsDropdown({
@@ -30,24 +32,39 @@ export function FileActionsDropdown({
   onRename,
   onMove,
   onDelete,
+  isTemplate = false,
 }: FileActionsDropdownProps) {
-  const downloadFileMutation = useServerDownloadFileMutation();
+  const serverDownloadFileMutation = useServerDownloadFileMutation();
+  const templateDownloadFileMutation = useTemplateDownloadFileMutation();
 
   const handleDownloadFile = (file: FileItem) => {
     const filePath =
       currentPath === "/" ? `/${file.name}` : `${currentPath}/${file.name}`;
 
-    toast.promise(
-      downloadFileMutation.mutateAsync({
-        server: serverId,
-        file: filePath,
-      }),
-      {
-        loading: "Downloading file...",
-        success: "File downloaded successfully",
-        error: "Failed to download file",
-      }
-    );
+    if (isTemplate) {
+      toast.promise(
+        templateDownloadFileMutation.mutateAsync({
+          file: filePath,
+        }),
+        {
+          loading: "Downloading template file...",
+          success: "Template file downloaded successfully",
+          error: "Failed to download template file",
+        }
+      );
+    } else {
+      toast.promise(
+        serverDownloadFileMutation.mutateAsync({
+          server: serverId!,
+          file: filePath,
+        }),
+        {
+          loading: "Downloading file...",
+          success: "File downloaded successfully",
+          error: "Failed to download file",
+        }
+      );
+    }
   };
 
   return (
@@ -75,7 +92,7 @@ export function FileActionsDropdown({
               e.stopPropagation();
               handleDownloadFile(file);
             }}
-            disabled={downloadFileMutation.isPending}
+            disabled={isTemplate ? templateDownloadFileMutation.isPending : serverDownloadFileMutation.isPending}
           >
             Download
           </DropdownMenuItem>

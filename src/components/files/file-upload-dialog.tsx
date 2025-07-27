@@ -12,10 +12,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useServerUploadFileMutation } from "@/hooks/mutations/use-server-upload-file-mutation";
+import { useTemplateUploadFileMutation } from "@/hooks/mutations/use-template-upload-file-mutation";
 
 interface FileUploadDialogProps {
-  serverId: string;
+  serverId?: string;
   currentPath: string;
+  isTemplate?: boolean;
 }
 
 export interface FileUploadDialogRef {
@@ -25,12 +27,13 @@ export interface FileUploadDialogRef {
 export const FileUploadDialog = forwardRef<
   FileUploadDialogRef,
   FileUploadDialogProps
->(({ serverId, currentPath }, ref) => {
+>(({ serverId, currentPath, isTemplate = false }, ref) => {
   const [open, setOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const uploadMutation = useServerUploadFileMutation(serverId);
+  const serverUploadMutation = useServerUploadFileMutation(serverId || "");
+  const templateUploadMutation = useTemplateUploadFileMutation();
 
   const openDialog = () => {
     setSelectedFile(null);
@@ -67,11 +70,18 @@ export const FileUploadDialog = forwardRef<
     closeDialog();
 
     // Start upload in background
-    uploadMutation.mutate({
-      server: serverId,
-      path: filePath,
-      file: selectedFile,
-    });
+    if (isTemplate) {
+      templateUploadMutation.mutate({
+        path: filePath,
+        file: selectedFile,
+      });
+    } else {
+      serverUploadMutation.mutate({
+        server: serverId!,
+        path: filePath,
+        file: selectedFile,
+      });
+    }
   };
 
   const formatFileSize = (bytes: number): string => {

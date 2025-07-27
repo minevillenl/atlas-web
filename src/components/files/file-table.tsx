@@ -43,7 +43,7 @@ const isEditable = (file: FileItem): boolean => {
 interface FileTableProps {
   files: FileItem[];
   isLoading: boolean;
-  serverId: string;
+  serverId?: string;
   currentPath: string;
   onNavigateToPath: (_path: string) => void;
   onEditFile: (_file: FileItem) => void;
@@ -51,6 +51,7 @@ interface FileTableProps {
   onMoveFile: (_file: FileItem) => void;
   onDeleteFile: (_file: FileItem) => void;
   onUploadFiles: (_files: File[]) => void;
+  isTemplate?: boolean;
 }
 
 export function FileTable({
@@ -64,6 +65,7 @@ export function FileTable({
   onMoveFile,
   onDeleteFile,
   onUploadFiles,
+  isTemplate = false,
 }: FileTableProps) {
   const navigate = useNavigate();
   const [isDragOver, setIsDragOver] = useState(false);
@@ -234,6 +236,7 @@ export function FileTable({
                     onRename={onRenameFile}
                     onMove={onMoveFile}
                     onDelete={onDeleteFile}
+                    isTemplate={isTemplate}
                   />
                 </td>
               </tr>

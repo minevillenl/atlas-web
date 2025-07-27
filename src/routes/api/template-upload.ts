@@ -1,0 +1,64 @@
+import { createServerFileRoute } from "@tanstack/react-start/server";
+
+import atlas from "@/server/lib/atlas-api/atlas-api.client";
+import { auth } from "@/server/lib/auth";
+
+export const ServerRoute = createServerFileRoute("/api/template-upload").methods({
+  POST: async ({ request }) => {
+    // Check authentication
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    });
+
+    if (!session) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+
+    // Get query parameters
+    const url = new URL(request.url);
+    const path = url.searchParams.get("path");
+
+    if (!path) {
+      return new Response("Missing path parameter", { status: 400 });
+    }
+
+    try {
+      // Proxy to Atlas API template upload endpoint
+      const atlasClient = atlas as any;
+      const encodedPath = encodeURIComponent(path);
+      const atlasUrl = `${atlasClient.baseUrl || process.env.ATLAS_API_URL || "http://localhost:9090"}/api/v1/templates/files/upload?path=${encodedPath}`;
+      
+      // Stream directly to Atlas without buffering
+      const response = await fetch(atlasUrl, {
+        method: "POST",
+        body: request.body,
+        headers: {
+          Authorization: `Bearer ${process.env.ATLAS_API_KEY}`,
+          "Content-Type": "application/octet-stream",
+        },
+        // @ts-ignore - duplex is needed for streaming
+        duplex: "half",
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Atlas API Error: ${errorText || response.statusText}`);
+      }
+
+      const result = await response.json();
+      
+      return new Response(JSON.stringify(result), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    } catch (error) {
+      console.error("Template upload error:", error);
+      return new Response(
+        error instanceof Error ? error.message : "Template upload failed",
+        { status: 500 }
+      );
+    }
+  },
+});

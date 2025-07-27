@@ -11,11 +11,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useServerDeleteFileMutation } from "@/hooks/mutations/use-server-delete-file-mutation";
+import { useTemplateDeleteFileMutation } from "@/hooks/mutations/use-template-delete-file-mutation";
 import { FileItem } from "@/server/lib/atlas-api/atlas-api.schemas";
 
 interface FileDeleteDialogProps {
-  serverId: string;
+  serverId?: string;
   currentPath: string;
+  isTemplate?: boolean;
 }
 
 export interface FileDeleteDialogRef {
@@ -25,11 +27,12 @@ export interface FileDeleteDialogRef {
 export const FileDeleteDialog = forwardRef<
   FileDeleteDialogRef,
   FileDeleteDialogProps
->(({ serverId, currentPath }, ref) => {
+>(({ serverId, currentPath, isTemplate = false }, ref) => {
   const [open, setOpen] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<FileItem | null>(null);
 
-  const deleteFileMutation = useServerDeleteFileMutation();
+  const serverDeleteFileMutation = useServerDeleteFileMutation();
+  const templateDeleteFileMutation = useTemplateDeleteFileMutation();
 
   const openDialog = (file: FileItem) => {
     setFileToDelete(file);
@@ -49,10 +52,16 @@ export const FileDeleteDialog = forwardRef<
         ? `/${fileToDelete.name}`
         : `${currentPath}/${fileToDelete.name}`;
 
-    deleteFileMutation.mutate({
-      server: serverId,
-      file: filePath,
-    });
+    if (isTemplate) {
+      templateDeleteFileMutation.mutate({
+        file: filePath,
+      });
+    } else {
+      serverDeleteFileMutation.mutate({
+        server: serverId!,
+        file: filePath,
+      });
+    }
 
     closeDialog();
   };

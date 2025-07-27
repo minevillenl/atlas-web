@@ -477,6 +477,120 @@ const getGroupActivities = os
     return activities;
   });
 
+// Template File Management
+const getTemplateFiles = os
+  .input(z.object({ path: z.string().optional() }))
+  .handler(async ({ input }) => {
+    const request = getWebRequest();
+    const session = await auth.api.getSession({
+      headers: request?.headers ?? new Headers(),
+    });
+
+    if (!session) {
+      throw new ORPCError("UNAUTHORIZED", { message: "Unauthorized" });
+    }
+
+    const files = await atlas.getTemplateFiles(input.path);
+    return files.data;
+  });
+
+const getTemplateFileContents = os
+  .input(z.object({ file: z.string() }))
+  .handler(async ({ input }) => {
+    const request = getWebRequest();
+    const session = await auth.api.getSession({
+      headers: request?.headers ?? new Headers(),
+    });
+
+    if (!session) {
+      throw new ORPCError("UNAUTHORIZED", { message: "Unauthorized" });
+    }
+
+    const fileContents = await atlas.getTemplateFileContents(input.file);
+    return fileContents;
+  });
+
+const writeTemplateFileContents = os
+  .input(z.object({ file: z.string(), content: z.string() }))
+  .handler(async ({ input }) => {
+    const request = getWebRequest();
+    const session = await auth.api.getSession({
+      headers: request?.headers ?? new Headers(),
+    });
+
+    if (!session) {
+      throw new ORPCError("UNAUTHORIZED", { message: "Unauthorized" });
+    }
+
+    const result = await atlas.writeTemplateFileContents(input.file, input.content);
+    return result;
+  });
+
+const deleteTemplateFile = os
+  .input(z.object({ file: z.string() }))
+  .handler(async ({ input }) => {
+    const request = getWebRequest();
+    const session = await auth.api.getSession({
+      headers: request?.headers ?? new Headers(),
+    });
+
+    if (!session) {
+      throw new ORPCError("UNAUTHORIZED", { message: "Unauthorized" });
+    }
+
+    const result = await atlas.deleteTemplateFile(input.file);
+    return result;
+  });
+
+const renameTemplateFile = os
+  .input(z.object({ oldPath: z.string(), newPath: z.string() }))
+  .handler(async ({ input }) => {
+    const request = getWebRequest();
+    const session = await auth.api.getSession({
+      headers: request?.headers ?? new Headers(),
+    });
+
+    if (!session) {
+      throw new ORPCError("UNAUTHORIZED", { message: "Unauthorized" });
+    }
+
+    const result = await atlas.renameTemplateFile(input);
+    return result;
+  });
+
+const createTemplateFolder = os
+  .input(z.object({ path: z.string() }))
+  .handler(async ({ input }) => {
+    const request = getWebRequest();
+    const session = await auth.api.getSession({
+      headers: request?.headers ?? new Headers(),
+    });
+
+    if (!session) {
+      throw new ORPCError("UNAUTHORIZED", { message: "Unauthorized" });
+    }
+
+    const result = await atlas.createTemplateFolder(input.path);
+    return result;
+  });
+
+
+const downloadTemplateFile = os
+  .input(z.object({ file: z.string() }))
+  .handler(async ({ input }) => {
+    const request = getWebRequest();
+    const session = await auth.api.getSession({
+      headers: request?.headers ?? new Headers(),
+    });
+
+    if (!session) {
+      throw new ORPCError("UNAUTHORIZED", { message: "Unauthorized" });
+    }
+
+    const result = await atlas.downloadTemplateFile(input.file);
+    return result;
+  });
+
 export default {
   serverList,
   getServer,
@@ -504,4 +618,12 @@ export default {
   getRecentActivities,
   getServerActivities,
   getGroupActivities,
+  // Template File Management
+  getTemplateFiles,
+  getTemplateFileContents,
+  writeTemplateFileContents,
+  deleteTemplateFile,
+  renameTemplateFile,
+  createTemplateFolder,
+  downloadTemplateFile,
 };

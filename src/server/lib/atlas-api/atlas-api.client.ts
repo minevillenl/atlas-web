@@ -587,6 +587,157 @@ export class AtlasApiClient {
     
     return this.request(url, {}, ActivitiesResponseSchema);
   }
+
+  // Template File Management
+  async getTemplateFiles(path?: string): Promise<FilesResponse> {
+    const encodedPath = path ? encodeURIComponent(path) : "";
+    const url = `/api/v1/templates/files${encodedPath ? `?path=${encodedPath}` : ""}`;
+    return this.request(url, {}, FilesResponseSchema);
+  }
+
+  async getTemplateFileContents(file: string): Promise<string> {
+    const encodedFile = encodeURIComponent(file);
+    const url = `/api/v1/templates/files/contents?file=${encodedFile}`;
+
+    const response = await fetch(`${this.baseUrl}${url}`, {
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Atlas API Error: ${errorText || response.statusText}`);
+    }
+
+    return response.text();
+  }
+
+  async writeTemplateFileContents(
+    file: string,
+    content: string
+  ): Promise<string> {
+    const encodedFile = encodeURIComponent(file);
+    const url = `/api/v1/templates/files/contents?file=${encodedFile}`;
+
+    const response = await fetch(`${this.baseUrl}${url}`, {
+      method: "PUT",
+      body: content,
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        "Content-Type": "text/plain",
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Atlas API Error: ${errorText || response.statusText}`);
+    }
+
+    return response.text();
+  }
+
+  async deleteTemplateFile(file: string): Promise<DeleteResponse> {
+    const encodedFile = encodeURIComponent(file);
+    const url = `/api/v1/templates/files/contents?file=${encodedFile}`;
+    return this.request(url, { method: "DELETE" }, FileDeleteResponseSchema);
+  }
+
+  async renameTemplateFile(renameData: FileRenameRequest): Promise<ApiResponse<{path: string}>> {
+    const url = "/api/v1/templates/files/rename";
+    return this.request(
+      url,
+      {
+        method: "POST",
+        body: JSON.stringify(renameData),
+      },
+      FileRenameResponseSchema
+    );
+  }
+
+  async downloadTemplateFile(file: string): Promise<Blob> {
+    const encodedFile = encodeURIComponent(file);
+    const url = `/api/v1/templates/files/download?file=${encodedFile}`;
+
+    const response = await fetch(`${this.baseUrl}${url}`, {
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Atlas API Error: ${response.statusText}`);
+    }
+
+    return response.blob();
+  }
+
+  async createTemplateFolder(path: string): Promise<FileMkdirResponse> {
+    const url = "/api/v1/templates/files/mkdir";
+    return this.request(
+      url,
+      {
+        method: "POST",
+        body: JSON.stringify({ path }),
+      },
+      FileMkdirResponseSchema
+    );
+  }
+
+  async uploadTemplateFile(
+    path: string,
+    file: File,
+    onProgress?: (_progress: number) => void
+  ): Promise<FileUploadResponse> {
+    const encodedPath = encodeURIComponent(path);
+    const url = `/api/v1/templates/files/upload?path=${encodedPath}`;
+
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+
+      if (onProgress) {
+        xhr.upload.addEventListener("progress", (event) => {
+          if (event.lengthComputable) {
+            const progress = (event.loaded / event.total) * 100;
+            onProgress(progress);
+          }
+        });
+      }
+
+      xhr.addEventListener("load", async () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            const result = FileUploadResponseSchema.parse(data);
+            resolve(result);
+          } catch (error) {
+            reject(new Error(`Failed to parse response: ${error}`));
+          }
+        } else {
+          reject(
+            new Error(`Atlas API Error: ${xhr.responseText || xhr.statusText}`)
+          );
+        }
+      });
+
+      xhr.addEventListener("error", () => {
+        reject(new Error("Network error occurred during upload"));
+      });
+
+      xhr.addEventListener("timeout", () => {
+        reject(new Error("Upload timeout"));
+      });
+
+      xhr.open("POST", `${this.baseUrl}${url}`);
+      xhr.setRequestHeader("Authorization", `Bearer ${this.apiKey}`);
+      xhr.setRequestHeader("Content-Type", "application/octet-stream");
+
+      // Set timeout to 10 minutes for large files
+      xhr.timeout = 10 * 60 * 1000;
+
+      xhr.send(file);
+    });
+  }
 }
 
 let atlasClient: AtlasApiClient | null = null;
@@ -664,6 +815,26 @@ const atlas = {
     getAtlasClient().getServerActivities(serverId, filters),
   getGroupActivities: (groupName: string, filters?: ActivityFilters) =>
     getAtlasClient().getGroupActivities(groupName, filters),
+  // Template File Management
+  getTemplateFiles: (path?: string) =>
+    getAtlasClient().getTemplateFiles(path),
+  getTemplateFileContents: (file: string) =>
+    getAtlasClient().getTemplateFileContents(file),
+  writeTemplateFileContents: (file: string, content: string) =>
+    getAtlasClient().writeTemplateFileContents(file, content),
+  deleteTemplateFile: (file: string) =>
+    getAtlasClient().deleteTemplateFile(file),
+  renameTemplateFile: (renameData: FileRenameRequest) =>
+    getAtlasClient().renameTemplateFile(renameData),
+  downloadTemplateFile: (file: string) =>
+    getAtlasClient().downloadTemplateFile(file),
+  createTemplateFolder: (path: string) =>
+    getAtlasClient().createTemplateFolder(path),
+  uploadTemplateFile: (
+    path: string,
+    file: File,
+    onProgress?: (_progress: number) => void
+  ) => getAtlasClient().uploadTemplateFile(path, file, onProgress),
 };
 
 export default atlas;
