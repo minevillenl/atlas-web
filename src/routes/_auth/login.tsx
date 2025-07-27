@@ -43,7 +43,7 @@ const RouteComponent = () => {
             <span className="text-sm">
               {isIdentityLoading
                 ? "Signing in..."
-                : "Sign in with Dusty Identity"}
+                : "Sign in with Mineville Identity"}
             </span>
           </button>
         </div>
