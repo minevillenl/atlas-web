@@ -29,7 +29,7 @@ const RouteComponent = () => {
         <img src="/logo.png" alt="Atlas" className="mx-auto mb-6 h-20 w-20" />
         <h1 className="mb-4 text-3xl font-bold">Welcome to Atlas</h1>
         <p className="text-muted-foreground">
-          Sign in with your Dusty Identity account to get started
+          Sign in with your Mineville Identity account to get started
         </p>
       </div>
 

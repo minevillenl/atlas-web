@@ -17,7 +17,7 @@ body {
   --card-foreground: hsla(0, 0%, 12%, 1);
   --popover: hsla(0, 0%, 95%, 1);
   --popover-foreground: hsla(0, 0%, 12%, 1);
-  --primary-plain: 30, 56%, 65%;
+  --primary-plain: 17, 100%, 62%;
   --primary: hsla(var(--primary-plain), 1);
   --primary-foreground: hsla(0, 0%, 12%, 1);
   --secondary: hsla(47, 100%, 67%, 1);
@@ -65,7 +65,7 @@ body {
   --card-foreground: hsla(0, 0%, 95%, 1);
   --popover: hsla(0, 0%, 13%, 1);
   --popover-foreground: hsla(0, 0%, 95%, 1);
-  --primary-plain: 30, 56%, 65%;
+  --primary-plain: 17, 100%, 62%;
   --primary: hsla(var(--primary-plain), 1);
   --primary-foreground: hsla(0, 0%, 95%, 1);
   --secondary: hsla(47, 100%, 53%, 1);
