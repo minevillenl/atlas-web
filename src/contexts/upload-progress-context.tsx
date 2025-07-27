@@ -1,4 +1,4 @@
-import { type ReactNode, createContext, useContext, useState } from "react";
+import { type ReactNode, createContext, useContext, useState, useEffect } from "react";
 
 export interface UploadProgress {
   id: string;
@@ -23,6 +23,9 @@ const UploadProgressContext = createContext<UploadProgressContextType | null>(
   null
 );
 
+const UPLOAD_RETENTION_TIME = 30000; // 30 seconds
+const MAX_UPLOADS = 50; // Maximum number of uploads to track
+
 export function UploadProgressProvider({ children }: { children: ReactNode }) {
   const [uploads, setUploads] = useState<UploadProgress[]>([]);
 
@@ -34,7 +37,20 @@ export function UploadProgressProvider({ children }: { children: ReactNode }) {
       startTime: Date.now(),
     };
 
-    setUploads((prev) => [...prev, newUpload]);
+    setUploads((prev) => {
+      // Limit total uploads to prevent unbounded growth
+      const newUploads = [...prev, newUpload];
+      if (newUploads.length > MAX_UPLOADS) {
+        // Remove oldest completed uploads first
+        const uploading = newUploads.filter(u => u.status === "uploading");
+        const completed = newUploads.filter(u => u.status !== "uploading")
+          .sort((a, b) => a.startTime - b.startTime);
+        
+        const toKeep = MAX_UPLOADS - uploading.length;
+        return [...uploading, ...completed.slice(-toKeep)];
+      }
+      return newUploads;
+    });
     return id;
   };
 
@@ -55,6 +71,26 @@ export function UploadProgressProvider({ children }: { children: ReactNode }) {
       prev.filter((upload) => upload.status === "uploading")
     );
   };
+
+  // Auto-cleanup completed uploads after retention time
+  useEffect(() => {
+    const cleanup = () => {
+      const now = Date.now();
+      setUploads((prev) =>
+        prev.filter((upload) => {
+          // Keep all uploading files
+          if (upload.status === "uploading") return true;
+          
+          // Keep recently completed/errored files
+          const age = now - upload.startTime;
+          return age < UPLOAD_RETENTION_TIME;
+        })
+      );
+    };
+
+    const interval = setInterval(cleanup, 5000); // Check every 5 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <UploadProgressContext.Provider

@@ -50,6 +50,7 @@ export const WebSocketProvider = ({
   );
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
+  const isUnmountedRef = useRef(false);
 
   const tokenMutation = useMutation(
     orpc.atlas.getWebSocketToken.mutationOptions()
@@ -58,7 +59,7 @@ export const WebSocketProvider = ({
   const connectRef = useRef<() => Promise<void>>(undefined);
 
   connectRef.current = async () => {
-    if (isConnecting || isConnected || ws || activeConnections.get(serverId)) {
+    if (isUnmountedRef.current || isConnecting || isConnected || ws || activeConnections.get(serverId)) {
       return;
     }
 
@@ -67,6 +68,12 @@ export const WebSocketProvider = ({
       setIsConnecting(true);
 
       const tokenData = await tokenMutation.mutateAsync({ server: serverId });
+
+      if (isUnmountedRef.current) {
+        activeConnections.delete(serverId);
+        setIsConnecting(false);
+        return;
+      }
 
       const wsUrl = `${env.VITE_ATLAS_WEBSOCKET_URL}/api/v1/servers/${serverId}/ws?auth=${tokenData.token}`;
       const socket = new WebSocket(wsUrl);
@@ -124,17 +131,22 @@ export const WebSocketProvider = ({
         setWs(null);
         activeConnections.delete(serverId);
 
-        if (reconnectAttemptsRef.current < 3) {
+        if (!isUnmountedRef.current && reconnectAttemptsRef.current < 3) {
           const delay = Math.min(
             1000 * Math.pow(2, reconnectAttemptsRef.current),
             30000
           );
           reconnectAttemptsRef.current++;
 
+          if (reconnectTimeoutRef.current) {
+            clearTimeout(reconnectTimeoutRef.current);
+          }
           reconnectTimeoutRef.current = setTimeout(() => {
-            connectRef.current?.();
+            if (!isUnmountedRef.current) {
+              connectRef.current?.();
+            }
           }, delay);
-        } else {
+        } else if (!isUnmountedRef.current) {
           setConnectionFailed(true);
         }
       });
@@ -195,9 +207,15 @@ export const WebSocketProvider = ({
   );
 
   useEffect(() => {
+    isUnmountedRef.current = false;
     connectRef.current?.();
 
+    // Capture the subscribers ref value at effect run time
+    const subscribers = subscribersRef.current;
+
     return () => {
+      isUnmountedRef.current = true;
+      
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
@@ -206,6 +224,12 @@ export const WebSocketProvider = ({
       if (ws) {
         ws.close();
       }
+
+      // Clean up active connections map
+      activeConnections.delete(serverId);
+      
+      // Clear subscribers using captured reference
+      subscribers.clear();
     };
 
     // eslint-disable-next-line react-hooks/exhaustive-deps

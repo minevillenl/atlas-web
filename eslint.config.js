@@ -34,7 +34,7 @@ const myRules = {
 export default [
   {
     // Global ignores - these files won't be linted at all
-    ignores: ["**/*.d.ts", "**/.vinxi/**", "**/.output/**"],
+    ignores: ["**/*.d.ts", "**/.vinxi/**", "**/.output/**", "db-data/**", ".tanstack/**"],
   },
   {
     rules: myRules,

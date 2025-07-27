@@ -25,6 +25,9 @@ const removeAnsiCodes = (str: string): string => {
     .replace("[?1h=[?2004h", "");
 };
 
+const MAX_LOGS = 1000; // Maximum number of logs to keep in memory
+const MAX_WEBSOCKET_LOGS = 500; // Maximum number of WebSocket logs to keep
+
 const ServerConsole = ({ server }: { server: Server }) => {
   const [autoScroll, setAutoScroll] = useState<boolean>(true);
   const [history, setHistory] = usePersistedState<string[]>(
@@ -108,7 +111,10 @@ const ServerConsole = ({ server }: { server: Server }) => {
     const result: LogLine[] = [];
     let previousLog: LogLine | undefined;
 
-    for (const rawLog of logsFetched.logs) {
+    // Only process the most recent logs to avoid memory issues
+    const logsToProcess = logsFetched.logs.slice(-MAX_LOGS);
+
+    for (const rawLog of logsToProcess) {
       const cleanLog = removeAnsiCodes(rawLog);
       if (cleanLog.trim() === "") continue;
 
@@ -165,25 +171,16 @@ const ServerConsole = ({ server }: { server: Server }) => {
     if (!isClient) return;
 
     const unsubscribe = subscribe((message) => {
-      console.log(
-        "[CONSOLE] All WebSocket messages:",
-        message.type,
-        message.serverId,
-        "Expected serverId:",
-        server.serverId
-      );
       if (message.type === "log" && message.serverId === server.serverId) {
-        console.log("[CONSOLE] Log message received:", message.message);
         const rawLogLine = message.message;
         if (typeof rawLogLine === "string" && rawLogLine.trim()) {
-          console.log("[CONSOLE] Processing log:", rawLogLine);
           const cleanLog = removeAnsiCodes(rawLogLine);
           const parsedLog = parseLog(cleanLog, null);
 
           if (parsedLog) {
-            console.log("[CONSOLE] Parsed log successfully:", parsedLog);
             setWebsocketLogs((prevLogs) => {
-              const newLogs = [...prevLogs, parsedLog];
+              // Limit the number of WebSocket logs to prevent unbounded growth
+              const newLogs = [...prevLogs, parsedLog].slice(-MAX_WEBSOCKET_LOGS);
 
               // Trigger scroll update for new WebSocket logs
               setTimeout(() => {
@@ -196,11 +193,7 @@ const ServerConsole = ({ server }: { server: Server }) => {
 
               return newLogs;
             });
-          } else {
-            console.log("[CONSOLE] Failed to parse log:", cleanLog);
           }
-        } else {
-          console.log("[CONSOLE] Invalid log message:", rawLogLine);
         }
       } else if (
         message.type === "status-update" &&
@@ -221,7 +214,8 @@ const ServerConsole = ({ server }: { server: Server }) => {
           };
 
           setWebsocketLogs((prevLogs) => {
-            const newLogs = [...prevLogs, statusLog];
+            // Limit the number of WebSocket logs to prevent unbounded growth
+            const newLogs = [...prevLogs, statusLog].slice(-MAX_WEBSOCKET_LOGS);
 
             // Trigger scroll update for status change
             setTimeout(() => {
@@ -326,6 +320,47 @@ const ServerConsole = ({ server }: { server: Server }) => {
     }
   }, [totalLogsCount, autoScroll, isProcessingInitial]);
 
+  // Clean up refs when total log count changes significantly
+  useEffect(() => {
+    const maxRefs = totalLogsCount + 100;
+    if (itemRefs.current.length > maxRefs) {
+      itemRefs.current = itemRefs.current.slice(0, maxRefs);
+    }
+  }, [totalLogsCount]);
+
+  // Clean up processing sets periodically
+  useEffect(() => {
+    const cleanup = () => {
+      const validIndices = new Set<number>();
+      for (let i = 0; i < totalLogsCount; i++) {
+        validIndices.add(i);
+      }
+
+      setBackgroundProcessed((prev) => {
+        const newSet = new Set<number>();
+        prev.forEach((index) => {
+          if (validIndices.has(index)) {
+            newSet.add(index);
+          }
+        });
+        return newSet;
+      });
+
+      setInitialProcessed((prev) => {
+        const newSet = new Set<number>();
+        prev.forEach((index) => {
+          if (validIndices.has(index)) {
+            newSet.add(index);
+          }
+        });
+        return newSet;
+      });
+    };
+
+    const timer = setTimeout(cleanup, 60000); // Clean up every minute
+    return () => clearTimeout(timer);
+  }, [totalLogsCount]);
+
   return (
     <Card className="py-0">
       <CardContent className="p-0">
@@ -385,7 +420,9 @@ const ServerConsole = ({ server }: { server: Server }) => {
                     <div
                       key={`http-${index}`}
                       ref={(el) => {
-                        itemRefs.current[index] = el;
+                        if (index < itemRefs.current.length) {
+                          itemRefs.current[index] = el;
+                        }
                       }}
                     >
                       <ConsoleLine line={log} />
@@ -396,7 +433,9 @@ const ServerConsole = ({ server }: { server: Server }) => {
                     <div
                       key={`http-${index}`}
                       ref={(el) => {
-                        itemRefs.current[index] = el;
+                        if (index < itemRefs.current.length) {
+                          itemRefs.current[index] = el;
+                        }
                       }}
                       className="whitespace-pre-wrap text-gray-400"
                       style={{ minHeight: "20px" }}
@@ -413,7 +452,9 @@ const ServerConsole = ({ server }: { server: Server }) => {
                   <div
                     key={`ws-${index}`}
                     ref={(el) => {
-                      itemRefs.current[globalIndex] = el;
+                      if (globalIndex < itemRefs.current.length + 100) {
+                        itemRefs.current[globalIndex] = el;
+                      }
                     }}
                   >
                     <ConsoleLine line={log} />
