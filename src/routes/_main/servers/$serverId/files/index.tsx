@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import React, { useRef } from "react";
 
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -30,6 +30,14 @@ import {
   type FileUploadDialogRef,
 } from "@/components/files/file-upload-dialog";
 import { UploadProgressIndicator } from "@/components/files/upload-progress-indicator";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { useServerCreateFolderMutation } from "@/hooks/mutations/use-server-create-folder-mutation";
 import { useServerUploadFileMutation } from "@/hooks/mutations/use-server-upload-file-mutation";
@@ -46,6 +54,23 @@ const sortFiles = (files: FileItem[]) => {
 
     return a.name.localeCompare(b.name);
   });
+};
+
+const generateBreadcrumbItems = (currentPath: string | undefined) => {
+  if (!currentPath || currentPath === "/") {
+    return [{ name: "container", path: "/" }];
+  }
+
+  const pathParts = currentPath.split("/").filter(Boolean);
+  const items = [{ name: "container", path: "/" }];
+
+  let accumulatedPath = "";
+  for (const part of pathParts) {
+    accumulatedPath += `/${part}`;
+    items.push({ name: part, path: accumulatedPath });
+  }
+
+  return items;
 };
 
 const RouteComponent = () => {
@@ -158,7 +183,38 @@ const RouteComponent = () => {
         </div>
 
         <div className="bg-muted/50 rounded-md px-4 py-2 font-mono text-sm">
-          {currentPath}
+          <Breadcrumb>
+            <BreadcrumbList className="text-muted-foreground !gap-0 flex-wrap items-center text-sm break-words">
+              <BreadcrumbItem className="!gap-0 inline-flex items-center">
+                <span>/home/</span>
+              </BreadcrumbItem>
+              {generateBreadcrumbItems(currentPath).map((item, index, array) => (
+                <React.Fragment key={item.path}>
+                  {index === array.length - 1 ? (
+                    <BreadcrumbItem className="!gap-0 inline-flex items-center">
+                      <BreadcrumbPage className="text-foreground font-mono">
+                        {item.name}
+                      </BreadcrumbPage>
+                    </BreadcrumbItem>
+                  ) : (
+                    <BreadcrumbItem className="!gap-0 inline-flex items-center">
+                      <BreadcrumbLink
+                        className="cursor-pointer hover:text-foreground font-mono"
+                        onClick={() => navigateToPath(item.path)}
+                      >
+                        {item.name}
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                  )}
+                  {index < array.length - 1 && (
+                    <BreadcrumbSeparator>
+                      <span>/</span>
+                    </BreadcrumbSeparator>
+                  )}
+                </React.Fragment>
+              ))}
+            </BreadcrumbList>
+          </Breadcrumb>
         </div>
 
         <div className="flex flex-col items-center justify-center space-y-4 py-12">
@@ -235,8 +291,38 @@ const RouteComponent = () => {
       </div>
 
       <div className="bg-muted/50 rounded-md px-4 py-2 font-mono text-sm">
-        <span className="text-muted-foreground">/home/container</span>
-        {currentPath}
+        <Breadcrumb>
+          <BreadcrumbList className="text-muted-foreground !gap-0 flex-wrap items-center text-sm break-words">
+            <BreadcrumbItem className="!gap-0 inline-flex items-center">
+              <span>/home/</span>
+            </BreadcrumbItem>
+            {generateBreadcrumbItems(currentPath).map((item, index, array) => (
+              <React.Fragment key={item.path}>
+                {index === array.length - 1 ? (
+                  <BreadcrumbItem className="!gap-0 inline-flex items-center">
+                    <BreadcrumbPage className="text-foreground font-mono">
+                      {item.name}
+                    </BreadcrumbPage>
+                  </BreadcrumbItem>
+                ) : (
+                  <BreadcrumbItem className="!gap-0 inline-flex items-center">
+                    <BreadcrumbLink
+                      className="cursor-pointer hover:text-foreground font-mono"
+                      onClick={() => navigateToPath(item.path)}
+                    >
+                      {item.name}
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                )}
+                {index < array.length - 1 && (
+                  <BreadcrumbSeparator>
+                    <span>/</span>
+                  </BreadcrumbSeparator>
+                )}
+              </React.Fragment>
+            ))}
+          </BreadcrumbList>
+        </Breadcrumb>
       </div>
 
       <FileTable
