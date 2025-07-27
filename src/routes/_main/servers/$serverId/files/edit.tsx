@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { Editor } from "@monaco-editor/react";
 import { useQuery } from "@tanstack/react-query";
@@ -118,14 +118,26 @@ const RouteComponent = () => {
     setHasChanges(content !== originalContent);
   }, [content, originalContent]);
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (!hasChanges || !filePath) return;
     saveFileMutation.mutate({
       server: serverId,
       file: filePath,
       content: content,
     });
-  };
+  }, [hasChanges, filePath, saveFileMutation, serverId, content]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "s") {
+        event.preventDefault();
+        handleSave();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleSave]);
 
   const handleBack = () => {
     if (hasChanges) {
