@@ -6,7 +6,7 @@ import {
   useNavigate,
   useSearch,
 } from "@tanstack/react-router";
-import { FilePlus, FolderIcon, FolderPlus, UploadIcon } from "lucide-react";
+import { FileText, FilePlus, FolderIcon, FolderPlus, UploadIcon } from "lucide-react";
 
 import {
   FileCreateDialog,
@@ -39,10 +39,11 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { useServerCreateFolderMutation } from "@/hooks/mutations/use-server-create-folder-mutation";
-import { useServerUploadFileMutation } from "@/hooks/mutations/use-server-upload-file-mutation";
+import { useTemplateCreateFolderMutation } from "@/hooks/mutations/use-template-create-folder-mutation";
+import { useTemplateUploadFileMutation } from "@/hooks/mutations/use-template-upload-file-mutation";
 import { orpc } from "@/lib/orpc";
 import { FileItem } from "@/server/lib/atlas-api/atlas-api.schemas";
+import { seo } from "@/utils/seo";
 
 const sortFiles = (files: FileItem[]) => {
   return [...files].sort((a, b) => {
@@ -58,11 +59,11 @@ const sortFiles = (files: FileItem[]) => {
 
 const generateBreadcrumbItems = (currentPath: string | undefined) => {
   if (!currentPath || currentPath === "/") {
-    return [{ name: "container", path: "/" }];
+    return [{ name: "templates", path: "/" }];
   }
 
   const pathParts = currentPath.split("/").filter(Boolean);
-  const items = [{ name: "container", path: "/" }];
+  const items = [{ name: "templates", path: "/" }];
 
   let accumulatedPath = "";
   for (const part of pathParts) {
@@ -74,9 +75,8 @@ const generateBreadcrumbItems = (currentPath: string | undefined) => {
 };
 
 const RouteComponent = () => {
-  const { serverId } = Route.useParams();
   const navigate = useNavigate();
-  const search = useSearch({ from: "/_main/servers/$serverId/files/" });
+  const search = useSearch({ from: "/_main/templates/" });
 
   const createDialogRef = useRef<FileCreateDialogRef>(null);
   const deleteDialogRef = useRef<FileDeleteDialogRef>(null);
@@ -86,22 +86,16 @@ const RouteComponent = () => {
 
   const currentPath = search.path;
 
-  const createFolderMutation = useServerCreateFolderMutation(serverId);
-  const uploadFileMutation = useServerUploadFileMutation(serverId);
-
-  const { data: server } = useQuery({
-    ...orpc.atlas.getServer.queryOptions({
-      input: { server: serverId },
-    }),
-  });
+  const createFolderMutation = useTemplateCreateFolderMutation();
+  const uploadFileMutation = useTemplateUploadFileMutation();
 
   const {
     data: files,
     isLoading,
     error,
   } = useQuery({
-    ...orpc.atlas.getServerFiles.queryOptions({
-      input: { server: serverId, path: currentPath || "/" },
+    ...orpc.atlas.getTemplateFiles.queryOptions({
+      input: { path: currentPath || "/" },
     }),
   });
 
@@ -129,14 +123,14 @@ const RouteComponent = () => {
       currentPath === "/" ? `/${file.name}` : `${currentPath}/${file.name}`;
 
     navigate({
-      to: `/servers/${serverId}/files/edit`,
+      to: "/templates/edit",
       search: { path: filePath },
     });
   };
 
   const handleCreateFile = () => {
     navigate({
-      to: `/servers/${serverId}/files/new`,
+      to: "/templates/new",
       search: { path: currentPath },
     });
   };
@@ -148,7 +142,6 @@ const RouteComponent = () => {
         : `${currentPath}/${folderName}`;
 
     createFolderMutation.mutate({
-      server: serverId,
       path: folderPath,
     });
   };
@@ -161,33 +154,19 @@ const RouteComponent = () => {
           : `${currentPath}/${file.name}`;
 
       uploadFileMutation.mutate({
-        server: serverId,
         path: filePath,
         file: file,
       });
     });
   };
 
-  if (!server) {
-    return <div>Loading...</div>;
-  }
-
   if (error) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FolderIcon className="text-foreground h-5 w-5" />
-            <span className="text-lg font-medium">File Manager</span>
-          </div>
-        </div>
 
         <div className="bg-muted/50 rounded-md px-4 py-2 font-mono text-sm">
           <Breadcrumb>
             <BreadcrumbList className="text-muted-foreground !gap-0 flex-wrap items-center text-sm break-words">
-              <BreadcrumbItem className="!gap-0 inline-flex items-center">
-                <span>/home/</span>
-              </BreadcrumbItem>
               {generateBreadcrumbItems(currentPath).map((item, index, array) => (
                 <React.Fragment key={item.path}>
                   {index === array.length - 1 ? (
@@ -222,10 +201,10 @@ const RouteComponent = () => {
             <FolderIcon className="h-12 w-12" />
           </div>
           <div className="text-center">
-            <h3 className="text-lg font-medium">Failed to load files</h3>
+            <h3 className="text-lg font-medium">Failed to load templates</h3>
             <p className="text-muted-foreground mt-1 text-sm">
               {error.message ||
-                "An error occurred while fetching the file list"}
+                "An error occurred while fetching the template list"}
             </p>
           </div>
           <Button variant="outline" onClick={() => window.location.reload()}>
@@ -259,8 +238,8 @@ const RouteComponent = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <FolderIcon className="text-foreground h-5 w-5" />
-          <span className="text-lg font-medium">File Manager</span>
+          <FileText className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-bold">Template Manager</h1>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -293,9 +272,6 @@ const RouteComponent = () => {
       <div className="bg-muted/50 rounded-md px-4 py-2 font-mono text-sm">
         <Breadcrumb>
           <BreadcrumbList className="text-muted-foreground !gap-0 flex-wrap items-center text-sm break-words">
-            <BreadcrumbItem className="!gap-0 inline-flex items-center">
-              <span>/home/</span>
-            </BreadcrumbItem>
             {generateBreadcrumbItems(currentPath).map((item, index, array) => (
               <React.Fragment key={item.path}>
                 {index === array.length - 1 ? (
@@ -328,7 +304,6 @@ const RouteComponent = () => {
       <FileTable
         files={sortedFiles}
         isLoading={isLoading}
-        serverId={serverId}
         currentPath={currentPath}
         onNavigateToPath={navigateToPath}
         onEditFile={handleEditFile}
@@ -336,24 +311,25 @@ const RouteComponent = () => {
         onMoveFile={handleMoveFile}
         onDeleteFile={handleDeleteFile}
         onUploadFiles={handleUploadFiles}
+        isTemplate={true}
       />
 
       <FileDeleteDialog
         ref={deleteDialogRef}
-        serverId={serverId}
         currentPath={currentPath}
+        isTemplate={true}
       />
 
       <FileRenameDialog
         ref={renameDialogRef}
-        serverId={serverId}
         currentPath={currentPath}
+        isTemplate={true}
       />
 
       <FileMoveDialog
         ref={moveDialogRef}
-        serverId={serverId}
         currentPath={currentPath}
+        isTemplate={true}
       />
 
       <FileCreateDialog
@@ -364,8 +340,8 @@ const RouteComponent = () => {
 
       <FileUploadDialog
         ref={uploadDialogRef}
-        serverId={serverId}
         currentPath={currentPath}
+        isTemplate={true}
       />
 
       <UploadProgressIndicator />
@@ -373,7 +349,17 @@ const RouteComponent = () => {
   );
 };
 
-export const Route = createFileRoute("/_main/servers/$serverId/files/")({
+export const Route = createFileRoute("/_main/templates/")({
+  head: () => {
+    return {
+      meta: [
+        ...seo({
+          title: "Template Manager | Atlas",
+          description: "Manage server templates and configuration files",
+        }),
+      ],
+    };
+  },
   component: RouteComponent,
   validateSearch: (search: Record<string, unknown>) => {
     return {

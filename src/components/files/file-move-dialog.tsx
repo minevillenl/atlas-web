@@ -12,11 +12,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useServerMoveFileMutation } from "@/hooks/mutations/use-server-move-file-mutation";
+import { useTemplateRenameFileMutation } from "@/hooks/mutations/use-template-rename-file-mutation";
 import { FileItem } from "@/server/lib/atlas-api/atlas-api.schemas";
 
 interface FileMoveDialogProps {
-  serverId: string;
+  serverId?: string;
   currentPath: string;
+  isTemplate?: boolean;
 }
 
 export interface FileMoveDialogRef {
@@ -26,12 +28,13 @@ export interface FileMoveDialogRef {
 export const FileMoveDialog = forwardRef<
   FileMoveDialogRef,
   FileMoveDialogProps
->(({ serverId, currentPath }, ref) => {
+>(({ serverId, currentPath, isTemplate = false }, ref) => {
   const [open, setOpen] = useState(false);
   const [fileToMove, setFileToMove] = useState<FileItem | null>(null);
   const [newFolderPath, setNewFolderPath] = useState("");
 
-  const moveFileMutation = useServerMoveFileMutation();
+  const serverMoveFileMutation = useServerMoveFileMutation();
+  const templateRenameFileMutation = useTemplateRenameFileMutation();
 
   const openDialog = (file: FileItem) => {
     setFileToMove(file);
@@ -67,11 +70,18 @@ export const FileMoveDialog = forwardRef<
       }
     }
 
-    moveFileMutation.mutate({
-      server: serverId,
-      file: currentFilePath,
-      newPath,
-    });
+    if (isTemplate) {
+      templateRenameFileMutation.mutate({
+        oldPath: currentFilePath,
+        newPath,
+      });
+    } else {
+      serverMoveFileMutation.mutate({
+        server: serverId!,
+        file: currentFilePath,
+        newPath,
+      });
+    }
 
     closeDialog();
   };
@@ -117,7 +127,7 @@ export const FileMoveDialog = forwardRef<
           </Button>
           <Button
             onClick={confirmMove}
-            disabled={!newFolderPath.trim() || moveFileMutation.isPending}
+            disabled={!newFolderPath.trim() || (isTemplate ? templateRenameFileMutation.isPending : serverMoveFileMutation.isPending)}
           >
             Move
           </Button>

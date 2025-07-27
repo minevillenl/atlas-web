@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import {
+  FileText,
   LayoutDashboardIcon,
   Server,
   Settings,
@@ -28,6 +29,11 @@ const Header = () => {
       name: "Servers",
       icon: Server,
       to: "/servers",
+    },
+    {
+      name: "Templates",
+      icon: FileText,
+      to: "/templates",
     },
     {
       name: "Admin",

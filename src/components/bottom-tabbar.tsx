@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import {
+  FileText,
   LayoutDashboardIcon,
   Server,
   Settings,
@@ -24,6 +25,11 @@ const BottomTabbar = () => {
       to: "/servers",
     },
     {
+      name: "Templates",
+      icon: FileText,
+      to: "/templates",
+    },
+    {
       name: "Admin",
       icon: Settings,
       to: "/admin",
@@ -32,7 +38,7 @@ const BottomTabbar = () => {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:hidden">
-      <div className="grid grid-cols-4 gap-1 px-2 py-2 pb-safe">
+      <div className="grid grid-cols-5 gap-1 px-2 py-2 pb-safe">
         {links.map((link) => (
           <Link
             key={link.name}

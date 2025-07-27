@@ -12,11 +12,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useServerRenameFileMutation } from "@/hooks/mutations/use-server-rename-file-mutation";
+import { useTemplateRenameFileMutation } from "@/hooks/mutations/use-template-rename-file-mutation";
 import { FileItem } from "@/server/lib/atlas-api/atlas-api.schemas";
 
 interface FileRenameDialogProps {
-  serverId: string;
+  serverId?: string;
   currentPath: string;
+  isTemplate?: boolean;
 }
 
 export interface FileRenameDialogRef {
@@ -26,12 +28,13 @@ export interface FileRenameDialogRef {
 export const FileRenameDialog = forwardRef<
   FileRenameDialogRef,
   FileRenameDialogProps
->(({ serverId, currentPath }, ref) => {
+>(({ serverId, currentPath, isTemplate = false }, ref) => {
   const [open, setOpen] = useState(false);
   const [fileToRename, setFileToRename] = useState<FileItem | null>(null);
   const [newFileName, setNewFileName] = useState("");
 
-  const renameFileMutation = useServerRenameFileMutation();
+  const serverRenameFileMutation = useServerRenameFileMutation();
+  const templateRenameFileMutation = useTemplateRenameFileMutation();
 
   const openDialog = (file: FileItem) => {
     setFileToRename(file);
@@ -58,11 +61,18 @@ export const FileRenameDialog = forwardRef<
         ? `/${newFileName.trim()}`
         : `${currentPath}/${newFileName.trim()}`;
 
-    renameFileMutation.mutate({
-      server: serverId,
-      oldPath,
-      newPath,
-    });
+    if (isTemplate) {
+      templateRenameFileMutation.mutate({
+        oldPath,
+        newPath,
+      });
+    } else {
+      serverRenameFileMutation.mutate({
+        server: serverId!,
+        oldPath,
+        newPath,
+      });
+    }
 
     closeDialog();
   };
@@ -109,7 +119,7 @@ export const FileRenameDialog = forwardRef<
             disabled={
               !newFileName.trim() ||
               newFileName === fileToRename?.name ||
-              renameFileMutation.isPending
+              (isTemplate ? templateRenameFileMutation.isPending : serverRenameFileMutation.isPending)
             }
           >
             Rename

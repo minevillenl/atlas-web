@@ -3,11 +3,11 @@ import { useCallback, useEffect, useState } from "react";
 import { Editor } from "@monaco-editor/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Loader2, Save } from "lucide-react";
+import { ArrowLeft, FileText, Loader2, Save } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useServerWriteFileMutation } from "@/hooks/mutations/use-server-write-file-mutation";
+import { useTemplateWriteFileMutation } from "@/hooks/mutations/use-template-write-file-mutation";
 import { orpc } from "@/lib/orpc";
 
 const getLanguageFromFileName = (fileName: string): string => {
@@ -65,7 +65,6 @@ const getLanguageFromFileName = (fileName: string): string => {
 };
 
 const RouteComponent = () => {
-  const { serverId } = Route.useParams();
   const navigate = useNavigate();
   const search = Route.useSearch();
 
@@ -76,30 +75,20 @@ const RouteComponent = () => {
   const filePath = search.path;
   const fileName = filePath?.split("/").pop() || "";
 
-  const { data: server } = useQuery({
-    ...orpc.atlas.getServer.queryOptions({
-      input: { server: serverId },
-    }),
-  });
-
   const {
     data: fileContent,
     isLoading: isLoadingContent,
     error,
   } = useQuery({
-    ...orpc.atlas.getServerFileContents.queryOptions({
-      input: { server: serverId, file: filePath || "" },
+    ...orpc.atlas.getTemplateFileContents.queryOptions({
+      input: { file: filePath || "" },
     }),
   });
 
-  const saveFileMutation = useServerWriteFileMutation(
-    serverId,
-    filePath || "",
-    () => {
-      setOriginalContent(content);
-      setHasChanges(false);
-    }
-  );
+  const saveFileMutation = useTemplateWriteFileMutation(filePath || "", () => {
+    setOriginalContent(content);
+    setHasChanges(false);
+  });
 
   useEffect(() => {
     if (fileContent) {
@@ -121,11 +110,10 @@ const RouteComponent = () => {
   const handleSave = useCallback(() => {
     if (!hasChanges || !filePath) return;
     saveFileMutation.mutate({
-      server: serverId,
       file: filePath,
       content: content,
     });
-  }, [hasChanges, filePath, saveFileMutation, serverId, content]);
+  }, [hasChanges, filePath, saveFileMutation, content]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -148,16 +136,12 @@ const RouteComponent = () => {
     }
 
     navigate({
-      to: `/servers/${serverId}/files`,
+      to: "/templates",
       search: { path: filePath?.split("/").slice(0, -1).join("/") || "/" },
     });
   };
 
   const language = filePath ? getLanguageFromFileName(fileName) : "plaintext";
-
-  if (!server) {
-    return <div>Loading...</div>;
-  }
 
   // Only show error if it's not a "file not found" error (which is expected for new files)
   if (
@@ -173,7 +157,10 @@ const RouteComponent = () => {
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
-          <h1 className="text-xl font-semibold">Edit File</h1>
+          <div className="flex items-center gap-2">
+            <FileText className="h-6 w-6 text-primary" />
+            <h1 className="text-2xl font-bold">Template Manager</h1>
+          </div>
         </div>
         <Card>
           <CardContent className="p-6">
@@ -182,9 +169,10 @@ const RouteComponent = () => {
                 <Loader2 className="h-12 w-12" />
               </div>
               <div className="text-center">
-                <h3 className="text-lg font-medium">Failed to load file</h3>
+                <h3 className="text-lg font-medium">Failed to load template</h3>
                 <p className="text-muted-foreground mt-1 text-sm">
-                  {error.message || "An error occurred while loading the file"}
+                  {error.message ||
+                    "An error occurred while loading the template"}
                 </p>
               </div>
               <Button
@@ -208,9 +196,12 @@ const RouteComponent = () => {
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
-          <div>
-            <h1 className="text-xl font-semibold">Edit File</h1>
-            <p className="text-muted-foreground text-sm">{filePath}</p>
+          <div className="flex items-center gap-2">
+            <FileText className="h-6 w-6 text-primary" />
+            <div>
+              <h1 className="text-2xl font-bold">Template Manager</h1>
+              <p className="text-muted-foreground text-sm">{filePath}</p>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -280,7 +271,7 @@ const RouteComponent = () => {
   );
 };
 
-export const Route = createFileRoute("/_main/servers/$serverId/files/edit")({
+export const Route = createFileRoute("/_main/templates/edit")({
   component: RouteComponent,
   validateSearch: (search: Record<string, unknown>) => {
     return {
