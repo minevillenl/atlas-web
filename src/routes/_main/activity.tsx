@@ -5,7 +5,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
   AlertCircle,
   AlertTriangle,
-  Archive,
   ChevronLeft,
   ChevronRight,
   Power,
@@ -41,8 +40,6 @@ const getActivityIcon = (activity: Activity) => {
       return <UserMinus className={iconClass} />;
     case "CAPACITY_REACHED":
       return <AlertTriangle className={iconClass} />;
-    case "BACKUP_OPERATION":
-      return <Archive className={iconClass} />;
     case "SERVER_RESTART":
       return <RotateCcw className={iconClass} />;
     case "ATLAS_LIFECYCLE":
@@ -125,16 +122,6 @@ const getActivityDetails = (activity: Activity) => {
           details: "Server at maximum capacity",
           badge: "FULL",
         };
-      case "BACKUP_OPERATION":
-        const success = metadata.success !== false;
-        const size = metadata.backupSize
-          ? `${Math.round(metadata.backupSize / 1024 / 1024)}MB`
-          : "";
-        return {
-          summary: success ? `Backup completed ${size}` : "Backup failed",
-          details: metadata.jobName || "Scheduled backup",
-          badge: success ? "SUCCESS" : "FAILED",
-        };
       case "SERVER_RESTART":
         return {
           summary: metadata.reason || "Manual restart",
@@ -175,7 +162,9 @@ function ActivityPage() {
     }),
   });
 
-  const activities = activitiesData?.data || [];
+  const activities = (activitiesData?.data || []).filter(
+    (activity) => activity.activityType !== "BACKUP_OPERATION"
+  );
   const groups = groupsData || [];
 
   const getGroupInternalName = (displayName: string): string => {
