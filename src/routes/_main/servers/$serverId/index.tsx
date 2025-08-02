@@ -197,7 +197,7 @@ const RouteComponent = () => {
         </Card>
       </div>
 
-      <div className="mt-4 sm:mt-6">
+      <div className="mt-4 sm:mt-6 mb-8">
         <ServerConsole
           server={{
             ...server,
