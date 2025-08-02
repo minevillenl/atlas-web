@@ -56,7 +56,6 @@
     "sonner": "^2.0.6",
     "tailwind-merge": "^2.6.0",
     "type-fest": "^4.41.0",
-    "undici": "^7.13.0",
     "zod": "^4.0.5"
   },
   "devDependencies": {
