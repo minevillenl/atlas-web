@@ -1,3 +1,4 @@
+import React, { useCallback } from "react";
 import { MoreVertical } from "lucide-react";
 import { toast } from "sonner";
 
@@ -26,7 +27,7 @@ interface FileActionsDropdownProps {
   isTemplate?: boolean;
 }
 
-export function FileActionsDropdown({
+export const FileActionsDropdown = React.memo(({
   file,
   serverId,
   currentPath,
@@ -37,11 +38,11 @@ export function FileActionsDropdown({
   onUnzip,
   onZipFolder,
   isTemplate = false,
-}: FileActionsDropdownProps) {
+}: FileActionsDropdownProps) => {
   const serverDownloadFileMutation = useServerDownloadFileMutation();
   const templateDownloadFileMutation = useTemplateDownloadFileMutation();
 
-  const handleDownloadFile = (file: FileItem) => {
+  const handleDownloadFile = useCallback((file: FileItem) => {
     const filePath =
       currentPath === "/" ? `/${file.name}` : `${currentPath}/${file.name}`;
 
@@ -69,7 +70,7 @@ export function FileActionsDropdown({
         }
       );
     }
-  };
+  }, [currentPath, isTemplate, templateDownloadFileMutation, serverDownloadFileMutation, serverId]);
 
   return (
     <DropdownMenu>
@@ -158,4 +159,6 @@ export function FileActionsDropdown({
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
+});
+
+FileActionsDropdown.displayName = "FileActionsDropdown";

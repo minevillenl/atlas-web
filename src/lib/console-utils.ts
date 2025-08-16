@@ -1,4 +1,4 @@
-import { LogLine, LogStyle, LogType } from "@/types/console";
+import { LogType, LogLine, LogStyle } from "@/types/console";
 
 export const LOG_STYLES: Record<LogType, LogStyle> = {
   error: {
@@ -37,11 +37,17 @@ export function parseLog(
   logString: string,
   lastLogLine: LogLine | null
 ): LogLine | null {
-  const logRegex = /^\[(\d{2}:\d{2}:\d{2})\s+(\w+)]\s*(.+)$/;
+  // Updated regex to handle optional colon after the bracket: [15:47:11 INFO]: message
+  const logRegex = /^\[(\d{2}:\d{2}:\d{2})\s+(\w+)]:?\s*(.+)$/;
   const logLevelRegex = /^(\w+):\s*(.+)$/;
 
-  const line = logString.trim();
+  let line = logString.trim();
   if (line === "") return null;
+
+  // Remove leading colon and space if present
+  if (line.startsWith(": ")) {
+    line = line.substring(2);
+  }
 
   const logLevelMatch = line.match(logLevelRegex);
   if (logLevelMatch) {
@@ -87,7 +93,7 @@ export function parseLog(
 
 export const getLogType = (
   message: string,
-  oldType: string | null
+  oldType?: string | null
 ): LogStyle => {
   // If explicitly set to "status", always use status style
   if (oldType === "status") {
@@ -165,3 +171,19 @@ export const getLogType = (
 
   return LOG_STYLES.info;
 };
+
+export function parseLogs(logString: string): LogLine[] {
+  const lines = logString.split("\n").filter(line => line.trim() !== "");
+  const parsedLogs: LogLine[] = [];
+  let lastLogLine: LogLine | null = null;
+
+  for (const line of lines) {
+    const parsed = parseLog(line, lastLogLine);
+    if (parsed) {
+      parsedLogs.push(parsed);
+      lastLogLine = parsed;
+    }
+  }
+
+  return parsedLogs;
+}

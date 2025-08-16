@@ -260,9 +260,9 @@ export class AtlasApiClient {
     return this.request("/api/v1/servers/count", {}, ServerCountResponseSchema);
   }
 
-  async getServerLogs(id: string): Promise<ServerLogsResponse> {
+  async getServerLogs(id: string, lines: number = 100): Promise<ServerLogsResponse> {
     return this.request(
-      `/api/v1/servers/${id}/logs`,
+      `/api/v1/servers/${id}/logs?lines=${lines}`,
       {},
       ServerLogsResponseSchema
     );
@@ -384,16 +384,25 @@ export class AtlasApiClient {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
 
-      if (onProgress) {
-        xhr.upload.addEventListener("progress", (event) => {
-          if (event.lengthComputable) {
-            const progress = (event.loaded / event.total) * 100;
-            onProgress(progress);
-          }
-        });
-      }
+      // Helper function to clean up all event listeners
+      const cleanup = () => {
+        xhr.removeEventListener("load", loadHandler);
+        xhr.removeEventListener("error", errorHandler);
+        xhr.removeEventListener("timeout", timeoutHandler);
+        if (onProgress && progressHandler) {
+          xhr.upload.removeEventListener("progress", progressHandler);
+        }
+      };
 
-      xhr.addEventListener("load", async () => {
+      const progressHandler = onProgress ? (event: ProgressEvent) => {
+        if (event.lengthComputable) {
+          const progress = (event.loaded / event.total) * 100;
+          onProgress(progress);
+        }
+      } : null;
+
+      const loadHandler = async () => {
+        cleanup();
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
             const data = JSON.parse(xhr.responseText);
@@ -407,15 +416,25 @@ export class AtlasApiClient {
             new Error(`Atlas API Error: ${xhr.responseText || xhr.statusText}`)
           );
         }
-      });
+      };
 
-      xhr.addEventListener("error", () => {
+      const errorHandler = () => {
+        cleanup();
         reject(new Error("Network error occurred during upload"));
-      });
+      };
 
-      xhr.addEventListener("timeout", () => {
+      const timeoutHandler = () => {
+        cleanup();
         reject(new Error("Upload timeout"));
-      });
+      };
+
+      if (progressHandler) {
+        xhr.upload.addEventListener("progress", progressHandler);
+      }
+
+      xhr.addEventListener("load", loadHandler);
+      xhr.addEventListener("error", errorHandler);
+      xhr.addEventListener("timeout", timeoutHandler);
 
       xhr.open("POST", `${this.baseUrl}${url}`);
       xhr.setRequestHeader("Authorization", `Bearer ${this.apiKey}`);
@@ -735,16 +754,25 @@ export class AtlasApiClient {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
 
-      if (onProgress) {
-        xhr.upload.addEventListener("progress", (event) => {
-          if (event.lengthComputable) {
-            const progress = (event.loaded / event.total) * 100;
-            onProgress(progress);
-          }
-        });
-      }
+      // Helper function to clean up all event listeners
+      const cleanup = () => {
+        xhr.removeEventListener("load", loadHandler);
+        xhr.removeEventListener("error", errorHandler);
+        xhr.removeEventListener("timeout", timeoutHandler);
+        if (onProgress && progressHandler) {
+          xhr.upload.removeEventListener("progress", progressHandler);
+        }
+      };
 
-      xhr.addEventListener("load", async () => {
+      const progressHandler = onProgress ? (event: ProgressEvent) => {
+        if (event.lengthComputable) {
+          const progress = (event.loaded / event.total) * 100;
+          onProgress(progress);
+        }
+      } : null;
+
+      const loadHandler = async () => {
+        cleanup();
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
             const data = JSON.parse(xhr.responseText);
@@ -758,15 +786,25 @@ export class AtlasApiClient {
             new Error(`Atlas API Error: ${xhr.responseText || xhr.statusText}`)
           );
         }
-      });
+      };
 
-      xhr.addEventListener("error", () => {
+      const errorHandler = () => {
+        cleanup();
         reject(new Error("Network error occurred during upload"));
-      });
+      };
 
-      xhr.addEventListener("timeout", () => {
+      const timeoutHandler = () => {
+        cleanup();
         reject(new Error("Upload timeout"));
-      });
+      };
+
+      if (progressHandler) {
+        xhr.upload.addEventListener("progress", progressHandler);
+      }
+
+      xhr.addEventListener("load", loadHandler);
+      xhr.addEventListener("error", errorHandler);
+      xhr.addEventListener("timeout", timeoutHandler);
 
       xhr.open("POST", `${this.baseUrl}${url}`);
       xhr.setRequestHeader("Authorization", `Bearer ${this.apiKey}`);
@@ -847,7 +885,7 @@ const atlas = {
   getUtilization: () => getAtlasClient().getUtilization(),
   getPlayerCount: () => getAtlasClient().getPlayerCount(),
   getServerCount: () => getAtlasClient().getServerCount(),
-  getServerLogs: (id: string) => getAtlasClient().getServerLogs(id),
+  getServerLogs: (id: string, lines?: number) => getAtlasClient().getServerLogs(id, lines),
   getServerFiles: (id: string, path?: string) =>
     getAtlasClient().getServerFiles(id, path),
   getServerFileContents: (id: string, file: string) =>

@@ -5,19 +5,23 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import React from "react";
-import { getLogType } from "@/lib/logs";
 import { cn } from "@/lib/utils";
+import { getLogType } from "@/lib/console-utils";
 import { LogLine } from "@/types/console";
+import { FancyAnsi } from "fancy-ansi";
+import { escapeRegExp } from "lodash";
+import React, { useMemo } from "react";
 
-const ConsoleLine = React.memo(({
-  line,
-  noTimestamp,
-}: {
-  line: LogLine;
+interface TerminalLineProps {
+  log: LogLine;
   noTimestamp?: boolean;
-}) => {
-  const { timestamp, message, rawTimestamp, logType } = line;
+  searchTerm?: string;
+}
+
+const fancyAnsi = new FancyAnsi();
+
+export const TerminalLine = React.memo(({ log, noTimestamp, searchTerm }: TerminalLineProps) => {
+  const { timestamp, message, rawTimestamp, logType } = log;
   const { type, variant } = getLogType(message, logType);
 
   const formattedTime = timestamp
@@ -27,6 +31,40 @@ const ConsoleLine = React.memo(({
         second: "2-digit",
       })
     : null;
+
+  // Memoize ANSI processing to improve performance
+  const processedHtml = useMemo(() => {
+    return fancyAnsi.toHtml(message);
+  }, [message]);
+
+  const highlightMessage = useMemo(() => {
+    if (!searchTerm) {
+      return (
+        <span
+          className="transition-colors font-mono"
+          dangerouslySetInnerHTML={{
+            __html: processedHtml,
+          }}
+        />
+      );
+    }
+
+    const searchRegex = new RegExp(`(${escapeRegExp(searchTerm)})`, "gi");
+    const modifiedContent = processedHtml.replace(
+      searchRegex,
+      (match) =>
+        `<span class="bg-orange-200/80 dark:bg-orange-900/80 font-bold font-mono">${match}</span>`
+    );
+
+    return (
+      <span
+        className="transition-colors font-mono"
+        dangerouslySetInnerHTML={{
+          __html: modifiedContent,
+        }}
+      />
+    );
+  }, [processedHtml, searchTerm]);
 
   const tooltip = (type: string, timestamp: string | null) => {
     const square = (
@@ -116,13 +154,11 @@ const ConsoleLine = React.memo(({
         </Badge>
       </div>
 
-      <span className="text-foreground font-mono text-xs dark:text-gray-200 min-w-0 flex-1">
-        {message}
+      <span className="text-foreground font-mono text-xs dark:text-gray-200 min-w-0 flex-1 whitespace-pre-wrap break-words">
+        {highlightMessage}
       </span>
     </div>
   );
 });
 
-ConsoleLine.displayName = "ConsoleLine";
-
-export default ConsoleLine;
+TerminalLine.displayName = "TerminalLine";

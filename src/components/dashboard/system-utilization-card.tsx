@@ -8,7 +8,8 @@ import { orpc } from "@/lib/orpc";
 const SystemUtilizationCard = () => {
   const { data: utilization, isPending } = useQuery({
     ...orpc.atlas.utilization.queryOptions(),
-    refetchInterval: 5000,
+    refetchInterval: 15000, // Reduce system metrics polling
+    staleTime: 10000,
   });
 
   const SkeletonCard = () => (

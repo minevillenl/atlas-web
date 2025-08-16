@@ -62,15 +62,37 @@ const RouteComponent = () => {
   useEffect(() => {
     const unsubscribe = subscribe((message) => {
       if (message.type === "status-update") {
-        setRealtimeServerInfo((prev: any) => ({
-          ...prev,
-          status: message.data.status,
-          serverId: message.data.serverId,
-        }));
+        setRealtimeServerInfo((_prev: any) => {
+          // Only keep essential data to prevent memory accumulation
+          return {
+            status: message.data.status,
+            serverId: message.data.serverId,
+            timestamp: Date.now(),
+          };
+        });
       } else if (message.type === "stats") {
-        setRealtimeStats(message.data);
+        // Limit stats data to prevent memory accumulation
+        const { cpu, ram, disk, network, players, maxPlayers, status } = message.data;
+        setRealtimeStats({
+          cpu: cpu || 0,
+          ram: ram || { used: 0, total: 0, percentage: 0 },
+          disk: disk || { used: 0, total: 0, percentage: 0 },
+          network: network || { uploadBytes: 0, downloadBytes: 0 },
+          players: players || 0,
+          maxPlayers: maxPlayers || 0,
+          status: status || "unknown",
+        });
       } else if (message.type === "server-info") {
-        setRealtimeServerInfo(message.data);
+        // Only store essential server info fields
+        const { status, serverId, players, maxPlayers, onlinePlayers } = message.data;
+        setRealtimeServerInfo({
+          status,
+          serverId,
+          players,
+          maxPlayers,
+          onlinePlayers,
+          timestamp: Date.now(),
+        });
       }
     });
 

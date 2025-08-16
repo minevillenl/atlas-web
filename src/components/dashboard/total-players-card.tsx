@@ -8,7 +8,8 @@ import { orpc } from "@/lib/orpc";
 const TotalPlayersCard = () => {
   const { data: playerCount, isPending } = useQuery({
     ...orpc.atlas.playerCount.queryOptions(),
-    refetchInterval: 5000,
+    refetchInterval: 10000, // Player counts update moderately frequently
+    staleTime: 5000, // Consider data fresh for 5 seconds
   });
 
   return (

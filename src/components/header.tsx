@@ -1,3 +1,4 @@
+import React, { useCallback, useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   FileText,
@@ -11,10 +12,10 @@ import {
 import { useAuthedQuery } from "@/features/auth/services/auth.query";
 import { authClient } from "@/lib/auth-client";
 
-const Header = () => {
+const Header = React.memo(() => {
   const { data: session } = useAuthedQuery();
 
-  const links = [
+  const links = useMemo(() => [
     {
       name: "Overview",
       icon: LayoutDashboardIcon,
@@ -40,7 +41,11 @@ const Header = () => {
       icon: Settings,
       to: "/admin",
     },
-  ];
+  ], []);
+
+  const handleSignOut = useCallback(() => {
+    authClient.signOut();
+  }, []);
 
   return (
     <header className="site-header mb-4 sm:mb-0">
@@ -78,12 +83,13 @@ const Header = () => {
                 {session.user.image ? (
                   <img
                     className="h-8 w-8 rounded-full transition-opacity hover:cursor-pointer hover:opacity-80"
-                    onClick={() => authClient.signOut()}
+                    onClick={handleSignOut}
                     src={session.user.image}
+                    alt="User Avatar"
                   />
                 ) : (
                   <UserIcon
-                    onClick={() => authClient.signOut()}
+                    onClick={handleSignOut}
                     className="text-muted-foreground hover:text-foreground h-5 w-5 cursor-pointer"
                   />
                 )}
@@ -94,6 +100,8 @@ const Header = () => {
       </div>
     </header>
   );
-};
+});
+
+Header.displayName = "Header";
 
 export default Header;

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useCallback, useState } from "react";
 
 import { useNavigate } from "@tanstack/react-router";
 import { File, Folder, Upload } from "lucide-react";
@@ -56,7 +56,7 @@ interface FileTableProps {
   isTemplate?: boolean;
 }
 
-export function FileTable({
+export const FileTable = React.memo(({
   files,
   isLoading,
   serverId,
@@ -70,11 +70,11 @@ export function FileTable({
   onUnzipFile,
   onZipFolder,
   isTemplate = false,
-}: FileTableProps) {
+}: FileTableProps) => {
   const navigate = useNavigate();
   const [isDragOver, setIsDragOver] = useState(false);
 
-  const handleRowClick = (file: FileItem, e: React.MouseEvent) => {
+  const handleRowClick = useCallback((file: FileItem, e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     if (target.closest("button") || target.closest("input")) return;
 
@@ -94,15 +94,15 @@ export function FileTable({
     } else if (isEditable(file)) {
       onEditFile(file);
     }
-  };
+  }, [currentPath, navigate, onNavigateToPath, onEditFile]);
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(true);
-  };
+  }, []);
 
-  const handleDragLeave = (e: React.DragEvent) => {
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
@@ -117,9 +117,9 @@ export function FileTable({
     if (isOutside) {
       setIsDragOver(false);
     }
-  };
+  }, []);
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
@@ -128,7 +128,7 @@ export function FileTable({
     if (droppedFiles.length > 0) {
       onUploadFiles(droppedFiles);
     }
-  };
+  }, [onUploadFiles]);
 
   return (
     <div 
@@ -254,4 +254,6 @@ export function FileTable({
       </table>
     </div>
   );
-}
+});
+
+FileTable.displayName = "FileTable";

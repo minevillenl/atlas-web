@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
@@ -12,6 +12,10 @@ import { seo } from "@/utils/seo";
 
 const RouteComponent = () => {
   const [filterInput, setFilterInput] = useState<FilterInput>({});
+  
+  const handleFiltersChange = useCallback((filters: FilterInput) => {
+    setFilterInput(filters);
+  }, []);
 
   const queryOptions = orpc.atlas.serverList.queryOptions({
     input: filterInput,
@@ -20,12 +24,14 @@ const RouteComponent = () => {
   const { data: servers, isLoading } = useQuery({
     ...queryOptions,
     placeholderData: (previousData) => previousData,
-    refetchInterval: 5000,
+    refetchInterval: 10000, // Reduce polling frequency to 10 seconds
+    staleTime: 5000, // Consider data fresh for 5 seconds
   });
 
   const { data: allServers } = useQuery({
     ...orpc.atlas.serverList.queryOptions({ input: {} }),
-    refetchInterval: 5000,
+    refetchInterval: 15000, // Reduce polling for all servers to 15 seconds
+    staleTime: 10000, // Consider data fresh for 10 seconds
   });
 
   const availableGroups = useMemo(() => {
@@ -64,7 +70,7 @@ const RouteComponent = () => {
 
         <ServerFilters
           availableGroups={availableGroups}
-          onFiltersChange={setFilterInput}
+          onFiltersChange={handleFiltersChange}
         />
       </div>
 

@@ -32,6 +32,14 @@ const WebSocketContext = createContext<WebSocketContextType | null>(null);
 
 const activeConnections = new Map<string, boolean>();
 
+// Periodic cleanup of stale connections to prevent memory leaks
+setInterval(() => {
+  // Clear all connections periodically as they should be managed by component lifecycle
+  if (activeConnections.size > 10) {
+    activeConnections.clear();
+  }
+}, 300000); // Clean up every 5 minutes
+
 interface WebSocketProviderProps {
   children: ReactNode;
   serverId: string;
@@ -89,9 +97,6 @@ export const WebSocketProvider = ({
       socket.addEventListener("message", (event) => {
         const data: WebSocketMessage = JSON.parse(event.data);
 
-        if (data.type === "log") {
-          console.log("[WEBSOCKET] Log message received:", data);
-        }
 
         if (data.type === "auth-challenge") {
           tokenMutation
@@ -216,12 +221,19 @@ export const WebSocketProvider = ({
     return () => {
       isUnmountedRef.current = true;
       
+      // Clear all timers
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
       }
 
+      // Close WebSocket connection properly
       if (ws) {
+        // Remove event listeners before closing to prevent memory leaks
+        ws.onopen = null;
+        ws.onmessage = null;
+        ws.onclose = null;
+        ws.onerror = null;
         ws.close();
       }
 
@@ -230,6 +242,13 @@ export const WebSocketProvider = ({
       
       // Clear subscribers using captured reference
       subscribers.clear();
+      
+      // Reset all state
+      setWs(null);
+      setIsConnected(false);
+      setIsConnecting(false);
+      setConnectionFailed(false);
+      reconnectAttemptsRef.current = 0;
     };
 
     // eslint-disable-next-line react-hooks/exhaustive-deps

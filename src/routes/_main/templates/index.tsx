@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useCallback, useMemo, useRef } from "react";
 
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -113,30 +113,30 @@ const RouteComponent = () => {
     }),
   });
 
-  const navigateToPath = (path: string) => {
+  const navigateToPath = useCallback((path: string) => {
     navigate({
       to: ".",
       search: { path },
     });
-  };
+  }, [navigate]);
 
-  const handleDeleteFile = (file: FileItem) => {
+  const handleDeleteFile = useCallback((file: FileItem) => {
     deleteDialogRef.current?.openDialog(file);
-  };
+  }, []);
 
-  const handleRenameFile = (file: FileItem) => {
+  const handleRenameFile = useCallback((file: FileItem) => {
     renameDialogRef.current?.openDialog(file);
-  };
+  }, []);
 
-  const handleMoveFile = (file: FileItem) => {
+  const handleMoveFile = useCallback((file: FileItem) => {
     moveDialogRef.current?.openDialog(file);
-  };
+  }, []);
 
-  const handleUnzipFile = (file: FileItem) => {
+  const handleUnzipFile = useCallback((file: FileItem) => {
     unzipDialogRef.current?.openDialog(file, currentPath || "/");
-  };
+  }, [currentPath]);
 
-  const handleZipFolder = (file: FileItem) => {
+  const handleZipFolder = useCallback((file: FileItem) => {
     const generateUniqueZipPath = (
       baseName: string,
       existingFiles: FileItem[]
@@ -171,9 +171,9 @@ const RouteComponent = () => {
         error: (error) => `Failed to zip folder: ${error.message}`,
       }
     );
-  };
+  }, [currentPath, files?.files, zipFolderMutation]);
 
-  const handleEditFile = (file: FileItem) => {
+  const handleEditFile = useCallback((file: FileItem) => {
     const filePath =
       currentPath === "/" ? `/${file.name}` : `${currentPath}/${file.name}`;
 
@@ -181,25 +181,25 @@ const RouteComponent = () => {
       to: "/templates/edit",
       search: { path: filePath },
     });
-  };
+  }, [currentPath, navigate]);
 
-  const handleCreateFile = () => {
+  const handleCreateFile = useCallback(() => {
     navigate({
       to: "/templates/new",
       search: { path: currentPath },
     });
-  };
+  }, [navigate, currentPath]);
 
-  const handleCreateFolder = (folderName: string) => {
+  const handleCreateFolder = useCallback((folderName: string) => {
     const folderPath =
       currentPath === "/" ? `/${folderName}` : `${currentPath}/${folderName}`;
 
     createFolderMutation.mutate({
       path: folderPath,
     });
-  };
+  }, [currentPath, createFolderMutation]);
 
-  const handleUploadFiles = (files: File[]) => {
+  const handleUploadFiles = useCallback((files: File[]) => {
     files.forEach((file) => {
       const filePath =
         currentPath === "/" ? `/${file.name}` : `${currentPath}/${file.name}`;
@@ -209,7 +209,32 @@ const RouteComponent = () => {
         file: file,
       });
     });
-  };
+  }, [currentPath, uploadFileMutation]);
+
+  const sortedFiles = useMemo(() => {
+    const filesWithBack =
+      currentPath !== "/"
+        ? [
+            {
+              name: "..",
+              mode: "rwxr-xr-x",
+              modeBits: 755,
+              mimeType: "inode/directory",
+              createdAt: new Date().toISOString(),
+              modifiedAt: new Date().toISOString(),
+              file: false,
+              symlink: false,
+            },
+            ...(files?.files || []),
+          ]
+        : files?.files || [];
+
+    return sortFiles(filesWithBack);
+  }, [files?.files, currentPath]);
+
+  const breadcrumbItems = useMemo(() => {
+    return generateBreadcrumbItems(currentPath);
+  }, [currentPath]);
 
   if (error) {
     return (
@@ -217,7 +242,7 @@ const RouteComponent = () => {
         <div className="bg-muted/50 rounded-md px-4 py-2 font-mono text-sm">
           <Breadcrumb>
             <BreadcrumbList className="text-muted-foreground flex-wrap items-center !gap-0 text-sm break-words">
-              {generateBreadcrumbItems(currentPath).map(
+              {breadcrumbItems.map(
                 (item, index, array) => (
                   <React.Fragment key={item.path}>
                     {index === array.length - 1 ? (
@@ -267,25 +292,6 @@ const RouteComponent = () => {
     );
   }
 
-  const filesWithBack =
-    currentPath !== "/"
-      ? [
-          {
-            name: "..",
-            mode: "rwxr-xr-x",
-            modeBits: 755,
-            mimeType: "inode/directory",
-            createdAt: new Date().toISOString(),
-            modifiedAt: new Date().toISOString(),
-            file: false,
-            symlink: false,
-          },
-          ...(files?.files || []),
-        ]
-      : files?.files || [];
-
-  const sortedFiles = sortFiles(filesWithBack);
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -320,7 +326,7 @@ const RouteComponent = () => {
       <div className="bg-muted/50 rounded-md px-4 py-2 font-mono text-sm">
         <Breadcrumb>
           <BreadcrumbList className="text-muted-foreground flex-wrap items-center !gap-0 text-sm break-words">
-            {generateBreadcrumbItems(currentPath).map((item, index, array) => (
+            {breadcrumbItems.map((item, index, array) => (
               <React.Fragment key={item.path}>
                 {index === array.length - 1 ? (
                   <BreadcrumbItem className="inline-flex items-center !gap-0">

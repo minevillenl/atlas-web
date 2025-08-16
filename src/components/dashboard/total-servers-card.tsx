@@ -8,7 +8,8 @@ import { orpc } from "@/lib/orpc";
 const TotalServersCard = () => {
   const { data: serverCount, isPending } = useQuery({
     ...orpc.atlas.serverCount.queryOptions(),
-    refetchInterval: 5000,
+    refetchInterval: 10000, // Server counts update moderately frequently
+    staleTime: 5000, // Consider data fresh for 5 seconds
   });
 
   return (

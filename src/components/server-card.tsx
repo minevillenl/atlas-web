@@ -1,3 +1,4 @@
+import React from "react";
 import { Link } from "@tanstack/react-router";
 import { CpuIcon, HardDriveIcon, MemoryStickIcon } from "lucide-react";
 
@@ -33,7 +34,7 @@ const formatBytes = (memory: number) => {
   }
 };
 
-const ServerCard = ({ server }: { server: Server }) => {
+const ServerCard = React.memo(({ server }: { server: Server }) => {
   return (
     <Link to="/servers/$serverId" params={{ serverId: server.serverId }}>
       <Card className="cursor-pointer overflow-hidden p-0 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
@@ -81,7 +82,9 @@ const ServerCard = ({ server }: { server: Server }) => {
       </Card>
     </Link>
   );
-};
+});
+
+ServerCard.displayName = "ServerCard";
 
 export const ServerCardSkeleton = () => {
   return (

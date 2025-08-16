@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ChevronDownIcon, SearchIcon, XIcon } from "lucide-react";
 
@@ -47,10 +47,10 @@ const getStatusColor = (status: string) => {
   }
 };
 
-export function ServerFilters({
+export const ServerFilters = React.memo(({
   availableGroups,
   onFiltersChange,
-}: ServerFiltersProps) {
+}: ServerFiltersProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [filters, setFilters] = useState<FilterState>({
@@ -81,18 +81,18 @@ export function ServerFilters({
 
   const activeFilterCount = (filters.status ? 1 : 0) + (filters.group ? 1 : 0);
 
-  const toggleFilter = (type: keyof FilterState, value: string) => {
+  const toggleFilter = useCallback((type: keyof FilterState, value: string) => {
     setFilters((prev) => ({
       ...prev,
       [type]: prev[type] === value ? null : value,
     }));
-  };
+  }, []);
 
-  const clearAllFilters = () => {
+  const clearAllFilters = useCallback(() => {
     setFilters({ status: null, group: null });
     setSearchQuery("");
     setDebouncedSearchQuery("");
-  };
+  }, []);
 
   return (
     <div className="flex flex-col gap-4">
@@ -253,4 +253,6 @@ export function ServerFilters({
       )}
     </div>
   );
-}
+});
+
+ServerFilters.displayName = "ServerFilters";
