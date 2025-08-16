@@ -8,7 +8,8 @@ import { orpc } from "@/lib/orpc";
 const SystemUtilizationHeaderCards = () => {
   const { data: utilization, isPending } = useQuery({
     ...orpc.atlas.utilization.queryOptions(),
-    refetchInterval: 5000,
+    refetchInterval: 15000, // System metrics don't change frequently
+    staleTime: 10000, // Consider data fresh for 10 seconds
   });
 
   return (

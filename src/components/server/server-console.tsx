@@ -13,20 +13,23 @@ import { orpc } from "@/lib/orpc";
 import { Server } from "@/server/lib/atlas-api/atlas-api.schemas";
 import { LogLine } from "@/types/console";
 
-const removeAnsiCodes = (str: string): string => {
-  const ansiEscapeCodePattern = /\x1b\[[0-9;]*[a-zA-Z]/g;
-  const otherWeirdCharactersPattern = /[\x00-\x1F\x7F-\x9F]/g;
+// Precompile regex patterns for performance
+const ANSI_ESCAPE_PATTERN = /\x1b\[[0-9;]*[a-zA-Z]/g;
+const WEIRD_CHARS_PATTERN = /[\x00-\x1F\x7F-\x9F]/g;
 
+const removeAnsiCodes = (str: string): string => {
   return str
-    .replace(ansiEscapeCodePattern, "")
-    .replace(otherWeirdCharactersPattern, "")
+    .replace(ANSI_ESCAPE_PATTERN, "")
+    .replace(WEIRD_CHARS_PATTERN, "")
     .replace(">....", "")
     .replace("]:", "]")
     .replace("[?1h=[?2004h", "");
 };
 
-const MAX_LOGS = 1000; // Maximum number of logs to keep in memory
+const MAX_LOGS = 2000; // Maximum number of logs to keep in memory
 const MAX_WEBSOCKET_LOGS = 500; // Maximum number of WebSocket logs to keep
+const MAX_REFS = 100; // Maximum number of DOM refs to keep active
+const MAX_PROCESSED_LOGS = 100; // Maximum number of logs to keep fully processed in viewport
 
 const ServerConsole = ({ server }: { server: Server }) => {
   const [autoScroll, setAutoScroll] = useState<boolean>(true);
@@ -152,8 +155,24 @@ const ServerConsole = ({ server }: { server: Server }) => {
   }, [totalLogsCount]);
 
   const handleScrollWithRange = useCallback(() => {
-    handleScroll();
-    updateVisibleRange();
+    // Debounce scroll handling for better performance
+    const scrollHandler = () => {
+      handleScroll();
+      updateVisibleRange();
+    };
+    
+    // Use requestAnimationFrame to throttle scroll events
+    if (!containerRef.current?.dataset.scrollPending) {
+      if (containerRef.current) {
+        containerRef.current.dataset.scrollPending = "true";
+      }
+      requestAnimationFrame(() => {
+        scrollHandler();
+        if (containerRef.current) {
+          containerRef.current.dataset.scrollPending = "";
+        }
+      });
+    }
   }, [handleScroll, updateVisibleRange]);
 
   const status = lastKnownStatus ?? server.serverInfo?.status ?? "UNKNOWN";
@@ -179,17 +198,27 @@ const ServerConsole = ({ server }: { server: Server }) => {
 
           if (parsedLog) {
             setWebsocketLogs((prevLogs) => {
-              // Limit the number of WebSocket logs to prevent unbounded growth
+              // Prevent duplicate logs and limit growth more aggressively
+              // Only check last few logs for duplicates to improve performance
+              const lastFewLogs = prevLogs.slice(-10);
+              const isDuplicate = lastFewLogs.some(log => 
+                log.message === parsedLog.message && 
+                log.timestamp && parsedLog.timestamp &&
+                Math.abs(log.timestamp.getTime() - parsedLog.timestamp.getTime()) < 1000
+              );
+              
+              if (isDuplicate) return prevLogs;
+              
               const newLogs = [...prevLogs, parsedLog].slice(-MAX_WEBSOCKET_LOGS);
 
-              // Trigger scroll update for new WebSocket logs
-              setTimeout(() => {
+              // Use requestAnimationFrame instead of setTimeout for better performance
+              requestAnimationFrame(() => {
                 if (autoScroll && containerRef.current) {
                   const container = containerRef.current;
                   container.style.scrollBehavior = "auto";
                   container.scrollTop = container.scrollHeight;
                 }
-              }, 0);
+              });
 
               return newLogs;
             });
@@ -214,17 +243,27 @@ const ServerConsole = ({ server }: { server: Server }) => {
           };
 
           setWebsocketLogs((prevLogs) => {
-            // Limit the number of WebSocket logs to prevent unbounded growth
+            // Prevent duplicate status messages by checking only recent logs
+            const lastFewLogs = prevLogs.slice(-5);
+            const isDuplicateStatus = lastFewLogs.some(log => 
+              log.logType === "status" && 
+              log.message === statusMessage &&
+              log.timestamp && statusLog.timestamp &&
+              Math.abs(log.timestamp.getTime() - statusLog.timestamp.getTime()) < 5000
+            );
+            
+            if (isDuplicateStatus) return prevLogs;
+            
             const newLogs = [...prevLogs, statusLog].slice(-MAX_WEBSOCKET_LOGS);
 
-            // Trigger scroll update for status change
-            setTimeout(() => {
+            // Use requestAnimationFrame for better performance
+            requestAnimationFrame(() => {
               if (autoScroll && containerRef.current) {
                 const container = containerRef.current;
                 container.style.scrollBehavior = "auto";
                 container.scrollTop = container.scrollHeight;
               }
-            }, 0);
+            });
 
             return newLogs;
           });
@@ -320,26 +359,30 @@ const ServerConsole = ({ server }: { server: Server }) => {
     }
   }, [totalLogsCount, autoScroll, isProcessingInitial]);
 
-  // Clean up refs when total log count changes significantly
+  // Clean up refs more aggressively to prevent memory leaks
   useEffect(() => {
-    const maxRefs = totalLogsCount + 100;
-    if (itemRefs.current.length > maxRefs) {
-      itemRefs.current = itemRefs.current.slice(0, maxRefs);
+    if (itemRefs.current.length > MAX_REFS) {
+      // Keep only the most recent refs and null out the rest
+      const newRefs = new Array(totalLogsCount).fill(null);
+      const keepStart = Math.max(0, totalLogsCount - MAX_REFS);
+      for (let i = keepStart; i < totalLogsCount && i < itemRefs.current.length; i++) {
+        newRefs[i] = itemRefs.current[i];
+      }
+      itemRefs.current = newRefs;
     }
   }, [totalLogsCount]);
 
-  // Clean up processing sets periodically
+  // Clean up processing sets more aggressively to prevent memory leaks
   useEffect(() => {
     const cleanup = () => {
-      const validIndices = new Set<number>();
-      for (let i = 0; i < totalLogsCount; i++) {
-        validIndices.add(i);
-      }
+      // Only keep indices for the most recent logs to prevent unbounded Set growth
+      const maxValidIndex = totalLogsCount - 1;
+      const minValidIndex = Math.max(0, totalLogsCount - MAX_PROCESSED_LOGS);
 
       setBackgroundProcessed((prev) => {
         const newSet = new Set<number>();
         prev.forEach((index) => {
-          if (validIndices.has(index)) {
+          if (index >= minValidIndex && index <= maxValidIndex) {
             newSet.add(index);
           }
         });
@@ -349,7 +392,7 @@ const ServerConsole = ({ server }: { server: Server }) => {
       setInitialProcessed((prev) => {
         const newSet = new Set<number>();
         prev.forEach((index) => {
-          if (validIndices.has(index)) {
+          if (index >= minValidIndex && index <= maxValidIndex) {
             newSet.add(index);
           }
         });
@@ -357,9 +400,21 @@ const ServerConsole = ({ server }: { server: Server }) => {
       });
     };
 
-    const timer = setTimeout(cleanup, 60000); // Clean up every minute
+    // Clean up more frequently to prevent accumulation
+    const timer = setTimeout(cleanup, 30000); // Clean up every 30 seconds
     return () => clearTimeout(timer);
   }, [totalLogsCount]);
+
+  // Cleanup on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      // Clear all state that could hold references
+      setWebsocketLogs([]);
+      setBackgroundProcessed(new Set());
+      setInitialProcessed(new Set());
+      itemRefs.current = [];
+    };
+  }, []);
 
   return (
     <Card className="py-0">
@@ -418,7 +473,7 @@ const ServerConsole = ({ server }: { server: Server }) => {
                 if (shouldShowProcessed) {
                   return (
                     <div
-                      key={`http-${index}`}
+                      key={log.id || `http-${index}`}
                       ref={(el) => {
                         if (index < itemRefs.current.length) {
                           itemRefs.current[index] = el;
@@ -431,7 +486,7 @@ const ServerConsole = ({ server }: { server: Server }) => {
                 } else {
                   return (
                     <div
-                      key={`http-${index}`}
+                      key={log.id || `http-${index}`}
                       ref={(el) => {
                         if (index < itemRefs.current.length) {
                           itemRefs.current[index] = el;
@@ -450,7 +505,7 @@ const ServerConsole = ({ server }: { server: Server }) => {
 
                 return (
                   <div
-                    key={`ws-${index}`}
+                    key={log.id || `ws-${index}`}
                     ref={(el) => {
                       if (globalIndex < itemRefs.current.length + 100) {
                         itemRefs.current[globalIndex] = el;

@@ -65,13 +65,25 @@ const ServerContent = () => {
   useEffect(() => {
     const unsubscribe = subscribe((message) => {
       if (message.type === "status-update") {
-        setRealtimeServerInfo((prev: any) => ({
-          ...prev,
-          status: message.data.status,
-          serverId: message.data.serverId,
-        }));
+        setRealtimeServerInfo((_prev: any) => {
+          // Prevent accumulation by only keeping essential data
+          return {
+            status: message.data.status,
+            serverId: message.data.serverId,
+            timestamp: Date.now(), // Add timestamp to track freshness
+          };
+        });
       } else if (message.type === "server-info") {
-        setRealtimeServerInfo(message.data);
+        // Limit the data stored to prevent memory accumulation
+        const { status, serverId, onlinePlayers, maxPlayers } = message.data;
+        setRealtimeServerInfo({
+          status,
+          serverId,
+          onlinePlayers,
+          maxPlayers,
+          timestamp: Date.now(),
+          // Only store essential server info, discard potentially large data
+        });
       }
       // Ignore log messages - they're handled by the console component
     });

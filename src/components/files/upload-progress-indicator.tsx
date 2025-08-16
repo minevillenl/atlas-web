@@ -1,3 +1,4 @@
+import React, { useCallback } from "react";
 import { CheckCircle, FileUp, X, XCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,10 @@ interface UploadProgressItemProps {
   onRemove: (_id: string) => void;
 }
 
-function UploadProgressItem({ upload, onRemove }: UploadProgressItemProps) {
+const UploadProgressItem = React.memo(({ upload, onRemove }: UploadProgressItemProps) => {
+  const handleRemove = useCallback(() => {
+    onRemove(upload.id);
+  }, [onRemove, upload.id]);
   const getStatusIcon = () => {
     switch (upload.status) {
       case "uploading":
@@ -66,7 +70,7 @@ function UploadProgressItem({ upload, onRemove }: UploadProgressItemProps) {
             variant="ghost"
             size="sm"
             className="h-6 w-6 p-0"
-            onClick={() => onRemove(upload.id)}
+            onClick={handleRemove}
           >
             <X className="h-3 w-3" />
           </Button>
@@ -84,9 +88,11 @@ function UploadProgressItem({ upload, onRemove }: UploadProgressItemProps) {
       </div>
     </div>
   );
-}
+});
 
-export function UploadProgressIndicator() {
+UploadProgressItem.displayName = "UploadProgressItem";
+
+export const UploadProgressIndicator = React.memo(() => {
   const { uploads, removeUpload, clearCompleted } = useUploadProgress();
 
   if (uploads.length === 0) {
@@ -131,4 +137,6 @@ export function UploadProgressIndicator() {
       </CardContent>
     </Card>
   );
-}
+});
+
+UploadProgressIndicator.displayName = "UploadProgressIndicator";

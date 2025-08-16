@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useCallback, useState } from "react";
 
 import { AlertTriangleIcon, XIcon } from "lucide-react";
 
@@ -9,23 +9,23 @@ interface ConnectionWarningProps {
   serverStatus: string;
 }
 
-const ConnectionWarning = ({ serverStatus }: ConnectionWarningProps) => {
+const ConnectionWarning = React.memo(({ serverStatus }: ConnectionWarningProps) => {
   const { connectionFailed, connect } = useWebSocketContext();
   const [isDismissed, setIsDismissed] = useState(false);
 
   const isServerError = serverStatus === "ERROR";
 
+  const handleRetry = useCallback(() => {
+    connect();
+  }, [connect]);
+
+  const handleDismiss = useCallback(() => {
+    setIsDismissed(true);
+  }, []);
+
   if (!connectionFailed || isDismissed || isServerError) {
     return null;
   }
-
-  const handleRetry = () => {
-    connect();
-  };
-
-  const handleDismiss = () => {
-    setIsDismissed(true);
-  };
 
   return (
     <div className="fixed right-4 bottom-4 left-4 z-50 mx-auto max-w-md">
@@ -69,6 +69,8 @@ const ConnectionWarning = ({ serverStatus }: ConnectionWarningProps) => {
       </div>
     </div>
   );
-};
+});
+
+ConnectionWarning.displayName = "ConnectionWarning";
 
 export default ConnectionWarning;
