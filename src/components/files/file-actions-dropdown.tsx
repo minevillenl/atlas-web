@@ -21,6 +21,8 @@ interface FileActionsDropdownProps {
   onRename: (_file: FileItem) => void;
   onMove: (_file: FileItem) => void;
   onDelete: (_file: FileItem) => void;
+  onUnzip?: (_file: FileItem) => void;
+  onZipFolder?: (_file: FileItem) => void;
   isTemplate?: boolean;
 }
 
@@ -32,6 +34,8 @@ export function FileActionsDropdown({
   onRename,
   onMove,
   onDelete,
+  onUnzip,
+  onZipFolder,
   isTemplate = false,
 }: FileActionsDropdownProps) {
   const serverDownloadFileMutation = useServerDownloadFileMutation();
@@ -95,6 +99,30 @@ export function FileActionsDropdown({
             disabled={isTemplate ? templateDownloadFileMutation.isPending : serverDownloadFileMutation.isPending}
           >
             Download
+          </DropdownMenuItem>
+        )}
+
+        {!file.file && !file.symlink && file.name !== ".." && onZipFolder && (
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              onZipFolder(file);
+            }}
+          >
+            Zip Folder
+          </DropdownMenuItem>
+        )}
+
+        {file.file && 
+         onUnzip && 
+         /\.(zip|rar)$/i.test(file.name) && (
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              onUnzip(file);
+            }}
+          >
+            Extract
           </DropdownMenuItem>
         )}
 

@@ -54,8 +54,16 @@ import {
   SystemMetricsSchema,
   type SystemStatus,
   SystemStatusSchema,
+  type UnzipFileRequest,
+  UnzipFileRequestSchema,
+  type UnzipFileResponse,
+  UnzipFileResponseSchema,
   type UtilizationResponse,
   UtilizationResponseSchema,
+  type ZipFilesRequest,
+  ZipFilesRequestSchema,
+  type ZipFilesResponse,
+  ZipFilesResponseSchema,
 } from "./atlas-api.schemas";
 
 export class AtlasApiClient {
@@ -513,6 +521,38 @@ export class AtlasApiClient {
     return completeResponse;
   }
 
+  async zipServerFiles(
+    id: string,
+    zipData: ZipFilesRequest
+  ): Promise<ZipFilesResponse> {
+    ZipFilesRequestSchema.parse(zipData);
+    const url = `/api/v1/servers/${id}/files/zip`;
+    return this.request(
+      url,
+      {
+        method: "POST",
+        body: JSON.stringify(zipData),
+      },
+      ZipFilesResponseSchema
+    );
+  }
+
+  async unzipServerFile(
+    id: string,
+    unzipData: UnzipFileRequest
+  ): Promise<UnzipFileResponse> {
+    UnzipFileRequestSchema.parse(unzipData);
+    const url = `/api/v1/servers/${id}/files/unzip`;
+    return this.request(
+      url,
+      {
+        method: "POST",
+        body: JSON.stringify(unzipData),
+      },
+      UnzipFileResponseSchema
+    );
+  }
+
   async generateWebSocketToken(
     id: string
   ): Promise<ApiResponse<{ token: string; expiresAt: number }>> {
@@ -738,6 +778,34 @@ export class AtlasApiClient {
       xhr.send(file);
     });
   }
+
+  async zipTemplateFiles(zipData: ZipFilesRequest): Promise<ZipFilesResponse> {
+    ZipFilesRequestSchema.parse(zipData);
+    const url = "/api/v1/templates/files/zip";
+    return this.request(
+      url,
+      {
+        method: "POST",
+        body: JSON.stringify(zipData),
+      },
+      ZipFilesResponseSchema
+    );
+  }
+
+  async unzipTemplateFile(
+    unzipData: UnzipFileRequest
+  ): Promise<UnzipFileResponse> {
+    UnzipFileRequestSchema.parse(unzipData);
+    const url = "/api/v1/templates/files/unzip";
+    return this.request(
+      url,
+      {
+        method: "POST",
+        body: JSON.stringify(unzipData),
+      },
+      UnzipFileResponseSchema
+    );
+  }
 }
 
 let atlasClient: AtlasApiClient | null = null;
@@ -835,6 +903,14 @@ const atlas = {
     file: File,
     onProgress?: (_progress: number) => void
   ) => getAtlasClient().uploadTemplateFile(path, file, onProgress),
+  zipServerFiles: (id: string, zipData: ZipFilesRequest) =>
+    getAtlasClient().zipServerFiles(id, zipData),
+  unzipServerFile: (id: string, unzipData: UnzipFileRequest) =>
+    getAtlasClient().unzipServerFile(id, unzipData),
+  zipTemplateFiles: (zipData: ZipFilesRequest) =>
+    getAtlasClient().zipTemplateFiles(zipData),
+  unzipTemplateFile: (unzipData: UnzipFileRequest) =>
+    getAtlasClient().unzipTemplateFile(unzipData),
 };
 
 export default atlas;

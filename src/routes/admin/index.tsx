@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 const RouteComponent = () => {
   return (
     <div className="space-y-6">
-      <div className="border-b pb-6">
+      <div className="pb-6">
         <h1 className="text-foreground text-3xl font-semibold">
           Administration Panel
         </h1>

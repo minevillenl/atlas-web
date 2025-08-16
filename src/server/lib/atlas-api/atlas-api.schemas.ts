@@ -498,3 +498,48 @@ export type ActivityType = z.infer<typeof ActivityTypeSchema>;
 export type Activity = z.infer<typeof ActivitySchema>;
 export type ActivityFilters = z.infer<typeof ActivityFiltersSchema>;
 export type ActivitiesResponse = z.infer<typeof ActivitiesResponseSchema>;
+
+// Zip/Unzip Schemas
+export const ZipFilesRequestSchema = z.object({
+  sources: z.array(z.string()).min(1, "At least one source path is required"),
+  zipPath: z.string().min(1, "Zip path is required"),
+  workingPath: z.string().optional()
+});
+
+export const ZipFilesResponseSchema = z.object({
+  status: z.literal("success"),
+  data: z.object({
+    zipPath: z.string(),
+    sources: z.array(z.string())
+  }),
+  message: z.string(),
+  timestamp: z.number()
+});
+
+export const UnzipFileRequestSchema = z.object({
+  zipPath: z.string().min(1, "Zip path is required"),
+  destination: z.string().min(1, "Destination path is required"),
+  workingPath: z.string().optional()
+});
+
+export const UnzipFileResponseSchema = z.object({
+  status: z.literal("success"),
+  data: z.object({
+    zipPath: z.string(),
+    destination: z.string()
+  }),
+  message: z.string(),
+  timestamp: z.number()
+});
+
+export const ErrorResponseSchema = z.object({
+  status: z.literal("error"),
+  message: z.string(),
+  timestamp: z.number()
+});
+
+export type ZipFilesRequest = z.infer<typeof ZipFilesRequestSchema>;
+export type ZipFilesResponse = z.infer<typeof ZipFilesResponseSchema>;
+export type UnzipFileRequest = z.infer<typeof UnzipFileRequestSchema>;
+export type UnzipFileResponse = z.infer<typeof UnzipFileResponseSchema>;
+export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;

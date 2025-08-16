@@ -6,7 +6,14 @@ import {
   useNavigate,
   useSearch,
 } from "@tanstack/react-router";
-import { FileText, FilePlus, FolderIcon, FolderPlus, UploadIcon } from "lucide-react";
+import {
+  FilePlus,
+  FileText,
+  FolderIcon,
+  FolderPlus,
+  UploadIcon,
+} from "lucide-react";
+import { toast } from "sonner";
 
 import {
   FileCreateDialog,
@@ -26,6 +33,10 @@ import {
 } from "@/components/files/file-rename-dialog";
 import { FileTable } from "@/components/files/file-table";
 import {
+  FileUnzipDialog,
+  type FileUnzipDialogRef,
+} from "@/components/files/file-unzip-dialog";
+import {
   FileUploadDialog,
   type FileUploadDialogRef,
 } from "@/components/files/file-upload-dialog";
@@ -41,6 +52,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useTemplateCreateFolderMutation } from "@/hooks/mutations/use-template-create-folder-mutation";
 import { useTemplateUploadFileMutation } from "@/hooks/mutations/use-template-upload-file-mutation";
+import { useTemplateZipFolderMutation } from "@/hooks/mutations/use-template-zip-files-mutation";
 import { orpc } from "@/lib/orpc";
 import { FileItem } from "@/server/lib/atlas-api/atlas-api.schemas";
 import { seo } from "@/utils/seo";
@@ -83,11 +95,13 @@ const RouteComponent = () => {
   const renameDialogRef = useRef<FileRenameDialogRef>(null);
   const moveDialogRef = useRef<FileMoveDialogRef>(null);
   const uploadDialogRef = useRef<FileUploadDialogRef>(null);
+  const unzipDialogRef = useRef<FileUnzipDialogRef>(null);
 
   const currentPath = search.path;
 
   const createFolderMutation = useTemplateCreateFolderMutation();
   const uploadFileMutation = useTemplateUploadFileMutation();
+  const zipFolderMutation = useTemplateZipFolderMutation();
 
   const {
     data: files,
@@ -118,6 +132,47 @@ const RouteComponent = () => {
     moveDialogRef.current?.openDialog(file);
   };
 
+  const handleUnzipFile = (file: FileItem) => {
+    unzipDialogRef.current?.openDialog(file, currentPath || "/");
+  };
+
+  const handleZipFolder = (file: FileItem) => {
+    const generateUniqueZipPath = (
+      baseName: string,
+      existingFiles: FileItem[]
+    ): string => {
+      const baseZipName = `${baseName}.zip`;
+
+      if (!existingFiles.some((f) => f.name === baseZipName)) {
+        return baseZipName;
+      }
+
+      let counter = 2;
+      while (true) {
+        const numberedZipName = `${baseName} (${counter}).zip`;
+        if (!existingFiles.some((f) => f.name === numberedZipName)) {
+          return numberedZipName;
+        }
+        counter++;
+      }
+    };
+
+    const zipFileName = generateUniqueZipPath(file.name, files?.files || []);
+
+    toast.promise(
+      zipFolderMutation.mutateAsync({
+        sources: [file.name],
+        zipPath: zipFileName,
+        workingPath: currentPath || "/",
+      }),
+      {
+        loading: `Zipping folder "${file.name}"...`,
+        success: `Successfully zipped "${file.name}" as "${zipFileName}"`,
+        error: (error) => `Failed to zip folder: ${error.message}`,
+      }
+    );
+  };
+
   const handleEditFile = (file: FileItem) => {
     const filePath =
       currentPath === "/" ? `/${file.name}` : `${currentPath}/${file.name}`;
@@ -137,9 +192,7 @@ const RouteComponent = () => {
 
   const handleCreateFolder = (folderName: string) => {
     const folderPath =
-      currentPath === "/"
-        ? `/${folderName}`
-        : `${currentPath}/${folderName}`;
+      currentPath === "/" ? `/${folderName}` : `${currentPath}/${folderName}`;
 
     createFolderMutation.mutate({
       path: folderPath,
@@ -149,9 +202,7 @@ const RouteComponent = () => {
   const handleUploadFiles = (files: File[]) => {
     files.forEach((file) => {
       const filePath =
-        currentPath === "/"
-          ? `/${file.name}`
-          : `${currentPath}/${file.name}`;
+        currentPath === "/" ? `/${file.name}` : `${currentPath}/${file.name}`;
 
       uploadFileMutation.mutate({
         path: filePath,
@@ -163,35 +214,36 @@ const RouteComponent = () => {
   if (error) {
     return (
       <div className="space-y-4">
-
         <div className="bg-muted/50 rounded-md px-4 py-2 font-mono text-sm">
           <Breadcrumb>
-            <BreadcrumbList className="text-muted-foreground !gap-0 flex-wrap items-center text-sm break-words">
-              {generateBreadcrumbItems(currentPath).map((item, index, array) => (
-                <React.Fragment key={item.path}>
-                  {index === array.length - 1 ? (
-                    <BreadcrumbItem className="!gap-0 inline-flex items-center">
-                      <BreadcrumbPage className="text-foreground font-mono">
-                        {item.name}
-                      </BreadcrumbPage>
-                    </BreadcrumbItem>
-                  ) : (
-                    <BreadcrumbItem className="!gap-0 inline-flex items-center">
-                      <BreadcrumbLink
-                        className="cursor-pointer hover:text-foreground font-mono"
-                        onClick={() => navigateToPath(item.path)}
-                      >
-                        {item.name}
-                      </BreadcrumbLink>
-                    </BreadcrumbItem>
-                  )}
-                  {index < array.length - 1 && (
-                    <BreadcrumbSeparator>
-                      <span>/</span>
-                    </BreadcrumbSeparator>
-                  )}
-                </React.Fragment>
-              ))}
+            <BreadcrumbList className="text-muted-foreground flex-wrap items-center !gap-0 text-sm break-words">
+              {generateBreadcrumbItems(currentPath).map(
+                (item, index, array) => (
+                  <React.Fragment key={item.path}>
+                    {index === array.length - 1 ? (
+                      <BreadcrumbItem className="inline-flex items-center !gap-0">
+                        <BreadcrumbPage className="text-foreground font-mono">
+                          {item.name}
+                        </BreadcrumbPage>
+                      </BreadcrumbItem>
+                    ) : (
+                      <BreadcrumbItem className="inline-flex items-center !gap-0">
+                        <BreadcrumbLink
+                          className="hover:text-foreground cursor-pointer font-mono"
+                          onClick={() => navigateToPath(item.path)}
+                        >
+                          {item.name}
+                        </BreadcrumbLink>
+                      </BreadcrumbItem>
+                    )}
+                    {index < array.length - 1 && (
+                      <BreadcrumbSeparator>
+                        <span>/</span>
+                      </BreadcrumbSeparator>
+                    )}
+                  </React.Fragment>
+                )
+              )}
             </BreadcrumbList>
           </Breadcrumb>
         </div>
@@ -238,15 +290,11 @@ const RouteComponent = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <FileText className="h-6 w-6 text-primary" />
+          <FileText className="text-primary h-6 w-6" />
           <h1 className="text-2xl font-bold">Template Manager</h1>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleCreateFile}
-          >
+          <Button size="sm" variant="outline" onClick={handleCreateFile}>
             <FilePlus className="mr-2 h-4 w-4" />
             New File
           </Button>
@@ -271,19 +319,19 @@ const RouteComponent = () => {
 
       <div className="bg-muted/50 rounded-md px-4 py-2 font-mono text-sm">
         <Breadcrumb>
-          <BreadcrumbList className="text-muted-foreground !gap-0 flex-wrap items-center text-sm break-words">
+          <BreadcrumbList className="text-muted-foreground flex-wrap items-center !gap-0 text-sm break-words">
             {generateBreadcrumbItems(currentPath).map((item, index, array) => (
               <React.Fragment key={item.path}>
                 {index === array.length - 1 ? (
-                  <BreadcrumbItem className="!gap-0 inline-flex items-center">
+                  <BreadcrumbItem className="inline-flex items-center !gap-0">
                     <BreadcrumbPage className="text-foreground font-mono">
                       {item.name}
                     </BreadcrumbPage>
                   </BreadcrumbItem>
                 ) : (
-                  <BreadcrumbItem className="!gap-0 inline-flex items-center">
+                  <BreadcrumbItem className="inline-flex items-center !gap-0">
                     <BreadcrumbLink
-                      className="cursor-pointer hover:text-foreground font-mono"
+                      className="hover:text-foreground cursor-pointer font-mono"
                       onClick={() => navigateToPath(item.path)}
                     >
                       {item.name}
@@ -311,6 +359,8 @@ const RouteComponent = () => {
         onMoveFile={handleMoveFile}
         onDeleteFile={handleDeleteFile}
         onUploadFiles={handleUploadFiles}
+        onUnzipFile={handleUnzipFile}
+        onZipFolder={handleZipFolder}
         isTemplate={true}
       />
 
@@ -343,6 +393,8 @@ const RouteComponent = () => {
         currentPath={currentPath}
         isTemplate={true}
       />
+
+      <FileUnzipDialog ref={unzipDialogRef} isTemplate={true} />
 
       <UploadProgressIndicator />
     </div>
