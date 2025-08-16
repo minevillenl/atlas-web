@@ -51,6 +51,8 @@ interface FileTableProps {
   onMoveFile: (_file: FileItem) => void;
   onDeleteFile: (_file: FileItem) => void;
   onUploadFiles: (_files: File[]) => void;
+  onUnzipFile?: (_file: FileItem) => void;
+  onZipFolder?: (_file: FileItem) => void;
   isTemplate?: boolean;
 }
 
@@ -65,6 +67,8 @@ export function FileTable({
   onMoveFile,
   onDeleteFile,
   onUploadFiles,
+  onUnzipFile,
+  onZipFolder,
   isTemplate = false,
 }: FileTableProps) {
   const navigate = useNavigate();
@@ -228,16 +232,20 @@ export function FileTable({
                   {formatDate(file.modifiedAt)}
                 </td>
                 <td className="p-3">
-                  <FileActionsDropdown
-                    file={file}
-                    serverId={serverId}
-                    currentPath={currentPath}
-                    onEdit={onEditFile}
-                    onRename={onRenameFile}
-                    onMove={onMoveFile}
-                    onDelete={onDeleteFile}
-                    isTemplate={isTemplate}
-                  />
+                  {file.name !== ".." && (
+                    <FileActionsDropdown
+                      file={file}
+                      serverId={serverId}
+                      currentPath={currentPath}
+                      onEdit={onEditFile}
+                      onRename={onRenameFile}
+                      onMove={onMoveFile}
+                      onDelete={onDeleteFile}
+                      onUnzip={onUnzipFile}
+                      onZipFolder={onZipFolder}
+                      isTemplate={isTemplate}
+                    />
+                  )}
                 </td>
               </tr>
             ))

@@ -5,6 +5,10 @@ import { z } from "zod";
 import { env } from "@/env";
 import atlas from "@/server/lib/atlas-api/atlas-api.client";
 import { auth } from "@/server/lib/auth";
+import {
+  UnzipFileRequestSchema,
+  ZipFilesRequestSchema,
+} from "@/server/lib/atlas-api/atlas-api.schemas";
 
 const serverListInputSchema = z.object({
   group: z.string().optional(),
@@ -477,6 +481,40 @@ const getGroupActivities = os
     return activities;
   });
 
+const zipServerFiles = os
+  .input(ZipFilesRequestSchema.extend({ server: z.string() }))
+  .handler(async ({ input }) => {
+    const request = getWebRequest();
+    const session = await auth.api.getSession({
+      headers: request?.headers ?? new Headers(),
+    });
+
+    if (!session) {
+      throw new ORPCError("UNAUTHORIZED", { message: "Unauthorized" });
+    }
+
+    const { server, ...zipData } = input;
+    const result = await atlas.zipServerFiles(server, zipData);
+    return result;
+  });
+
+const unzipServerFile = os
+  .input(UnzipFileRequestSchema.extend({ server: z.string() }))
+  .handler(async ({ input }) => {
+    const request = getWebRequest();
+    const session = await auth.api.getSession({
+      headers: request?.headers ?? new Headers(),
+    });
+
+    if (!session) {
+      throw new ORPCError("UNAUTHORIZED", { message: "Unauthorized" });
+    }
+
+    const { server, ...unzipData } = input;
+    const result = await atlas.unzipServerFile(server, unzipData);
+    return result;
+  });
+
 // Template File Management
 const getTemplateFiles = os
   .input(z.object({ path: z.string().optional() }))
@@ -591,6 +629,38 @@ const downloadTemplateFile = os
     return result;
   });
 
+const zipTemplateFiles = os
+  .input(ZipFilesRequestSchema)
+  .handler(async ({ input }) => {
+    const request = getWebRequest();
+    const session = await auth.api.getSession({
+      headers: request?.headers ?? new Headers(),
+    });
+
+    if (!session) {
+      throw new ORPCError("UNAUTHORIZED", { message: "Unauthorized" });
+    }
+
+    const result = await atlas.zipTemplateFiles(input);
+    return result;
+  });
+
+const unzipTemplateFile = os
+  .input(UnzipFileRequestSchema)
+  .handler(async ({ input }) => {
+    const request = getWebRequest();
+    const session = await auth.api.getSession({
+      headers: request?.headers ?? new Headers(),
+    });
+
+    if (!session) {
+      throw new ORPCError("UNAUTHORIZED", { message: "Unauthorized" });
+    }
+
+    const result = await atlas.unzipTemplateFile(input);
+    return result;
+  });
+
 export default {
   serverList,
   getServer,
@@ -613,6 +683,8 @@ export default {
   downloadServerFile,
   createServerFolder,
   uploadServerFile,
+  zipServerFiles,
+  unzipServerFile,
   executeServerCommand,
   getWebSocketToken,
   getRecentActivities,
@@ -626,4 +698,6 @@ export default {
   renameTemplateFile,
   createTemplateFolder,
   downloadTemplateFile,
+  zipTemplateFiles,
+  unzipTemplateFile,
 };
