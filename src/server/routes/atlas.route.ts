@@ -50,7 +50,7 @@ const getServer = os
   });
 
 const getServerLogs = os
-  .input(z.object({ server: z.string() }))
+  .input(z.object({ server: z.string(), lines: z.number().optional() }))
   .handler(async ({ input }) => {
     const request = getWebRequest();
     const session = await auth.api.getSession({
@@ -61,7 +61,7 @@ const getServerLogs = os
       throw new ORPCError("UNAUTHORIZED", { message: "Unauthorized" });
     }
 
-    const logs = await atlas.getServerLogs(input.server);
+    const logs = await atlas.getServerLogs(input.server, input.lines);
     return logs.data;
   });
 

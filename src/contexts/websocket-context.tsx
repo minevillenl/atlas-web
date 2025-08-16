@@ -97,9 +97,6 @@ export const WebSocketProvider = ({
       socket.addEventListener("message", (event) => {
         const data: WebSocketMessage = JSON.parse(event.data);
 
-        if (data.type === "log") {
-          console.log("[WEBSOCKET] Log message received:", data);
-        }
 
         if (data.type === "auth-challenge") {
           tokenMutation

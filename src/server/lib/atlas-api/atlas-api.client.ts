@@ -260,9 +260,9 @@ export class AtlasApiClient {
     return this.request("/api/v1/servers/count", {}, ServerCountResponseSchema);
   }
 
-  async getServerLogs(id: string): Promise<ServerLogsResponse> {
+  async getServerLogs(id: string, lines: number = 100): Promise<ServerLogsResponse> {
     return this.request(
-      `/api/v1/servers/${id}/logs`,
+      `/api/v1/servers/${id}/logs?lines=${lines}`,
       {},
       ServerLogsResponseSchema
     );
@@ -885,7 +885,7 @@ const atlas = {
   getUtilization: () => getAtlasClient().getUtilization(),
   getPlayerCount: () => getAtlasClient().getPlayerCount(),
   getServerCount: () => getAtlasClient().getServerCount(),
-  getServerLogs: (id: string) => getAtlasClient().getServerLogs(id),
+  getServerLogs: (id: string, lines?: number) => getAtlasClient().getServerLogs(id, lines),
   getServerFiles: (id: string, path?: string) =>
     getAtlasClient().getServerFiles(id, path),
   getServerFileContents: (id: string, file: string) =>
