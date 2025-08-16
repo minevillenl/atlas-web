@@ -115,9 +115,7 @@ export function FileActionsDropdown({
 
         {file.file && 
          onUnzip && 
-         (file.name.toLowerCase().endsWith(".zip") || 
-          file.name.toLowerCase().endsWith(".jar") || 
-          file.name.toLowerCase().endsWith(".war")) && (
+         /\.(zip|rar)$/i.test(file.name) && (
           <DropdownMenuItem
             onClick={(e) => {
               e.stopPropagation();
