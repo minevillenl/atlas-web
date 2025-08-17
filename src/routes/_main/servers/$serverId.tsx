@@ -14,6 +14,7 @@ import {
   RefreshCcwIcon,
   TerminalIcon,
   UsersIcon,
+  History,
 } from "lucide-react";
 
 import ConnectionWarning from "@/components/connection-warning";
@@ -44,6 +45,11 @@ const links = [
     label: "Players",
     icon: UsersIcon,
     to: "/servers/$serverId/players",
+  },
+  {
+    label: "Activity",
+    icon: History,
+    to: "/servers/$serverId/activity",
   },
 ];
 

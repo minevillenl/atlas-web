@@ -20,8 +20,8 @@ const adminNavItems = [
     icon: Users,
   },
   {
-    title: "Logs",
-    href: "/admin/logs",
+    title: "Audit Logs",
+    href: "/admin/audit-logs",
     icon: FileText,
   },
 ];
@@ -33,12 +33,12 @@ const RouteComponent = () => {
     <div className="bg-background flex min-h-screen">
       {/* Sidebar */}
       <div className="bg-card/50 w-64 border-r backdrop-blur-sm">
-        <div className="flex h-16 items-center border-b px-6">
+        <Link to="/" className="flex h-16 items-center border-b px-6">
           <div className="flex items-center gap-2">
             <Shield className="text-primary h-6 w-6" />
-            <h1 className="text-lg font-semibold">Admin Panel</h1>
+            <h1 className="text-lg font-semibold">Atlas Admin</h1>
           </div>
-        </div>
+        </Link>
 
         <nav className="p-4">
           <ul className="space-y-2">

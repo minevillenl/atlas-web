@@ -16,6 +16,7 @@ import { Route as MainRouteImport } from "./routes/_main";
 import { Route as AuthRouteImport } from "./routes/_auth";
 import { Route as AdminIndexRouteImport } from "./routes/admin/index";
 import { Route as MainIndexRouteImport } from "./routes/_main/index";
+import { Route as AdminAuditLogsRouteImport } from "./routes/admin/audit-logs";
 import { Route as MainActivityRouteImport } from "./routes/_main/activity";
 import { Route as AuthLoginRouteImport } from "./routes/_auth/login";
 import { Route as MainTemplatesIndexRouteImport } from "./routes/_main/templates/index";
@@ -26,7 +27,10 @@ import { Route as MainTemplatesEditRouteImport } from "./routes/_main/templates/
 import { Route as MainServersServerIdRouteImport } from "./routes/_main/servers/$serverId";
 import { Route as MainGroupsGroupIdRouteImport } from "./routes/_main/groups/$groupId";
 import { Route as MainServersServerIdIndexRouteImport } from "./routes/_main/servers/$serverId/index";
+import { Route as MainGroupsGroupIdIndexRouteImport } from "./routes/_main/groups/$groupId/index";
 import { Route as MainServersServerIdPlayersRouteImport } from "./routes/_main/servers/$serverId/players";
+import { Route as MainServersServerIdActivityRouteImport } from "./routes/_main/servers/$serverId/activity";
+import { Route as MainGroupsGroupIdActivityRouteImport } from "./routes/_main/groups/$groupId/activity";
 import { Route as MainServersServerIdFilesIndexRouteImport } from "./routes/_main/servers/$serverId/files/index";
 import { Route as MainServersServerIdFilesNewRouteImport } from "./routes/_main/servers/$serverId/files/new";
 import { Route as MainServersServerIdFilesEditRouteImport } from "./routes/_main/servers/$serverId/files/edit";
@@ -61,6 +65,11 @@ const MainIndexRoute = MainIndexRouteImport.update({
   id: "/",
   path: "/",
   getParentRoute: () => MainRoute,
+} as any);
+const AdminAuditLogsRoute = AdminAuditLogsRouteImport.update({
+  id: "/audit-logs",
+  path: "/audit-logs",
+  getParentRoute: () => AdminRoute,
 } as any);
 const MainActivityRoute = MainActivityRouteImport.update({
   id: "/activity",
@@ -113,11 +122,28 @@ const MainServersServerIdIndexRoute =
     path: "/",
     getParentRoute: () => MainServersServerIdRoute,
   } as any);
+const MainGroupsGroupIdIndexRoute = MainGroupsGroupIdIndexRouteImport.update({
+  id: "/",
+  path: "/",
+  getParentRoute: () => MainGroupsGroupIdRoute,
+} as any);
 const MainServersServerIdPlayersRoute =
   MainServersServerIdPlayersRouteImport.update({
     id: "/players",
     path: "/players",
     getParentRoute: () => MainServersServerIdRoute,
+  } as any);
+const MainServersServerIdActivityRoute =
+  MainServersServerIdActivityRouteImport.update({
+    id: "/activity",
+    path: "/activity",
+    getParentRoute: () => MainServersServerIdRoute,
+  } as any);
+const MainGroupsGroupIdActivityRoute =
+  MainGroupsGroupIdActivityRouteImport.update({
+    id: "/activity",
+    path: "/activity",
+    getParentRoute: () => MainGroupsGroupIdRoute,
   } as any);
 const MainServersServerIdFilesIndexRoute =
   MainServersServerIdFilesIndexRouteImport.update({
@@ -172,16 +198,20 @@ export interface FileRoutesByFullPath {
   "/admin": typeof AdminRouteWithChildren;
   "/login": typeof AuthLoginRoute;
   "/activity": typeof MainActivityRoute;
+  "/admin/audit-logs": typeof AdminAuditLogsRoute;
   "/": typeof MainIndexRoute;
   "/admin/": typeof AdminIndexRoute;
-  "/groups/$groupId": typeof MainGroupsGroupIdRoute;
+  "/groups/$groupId": typeof MainGroupsGroupIdRouteWithChildren;
   "/servers/$serverId": typeof MainServersServerIdRouteWithChildren;
   "/templates/edit": typeof MainTemplatesEditRoute;
   "/templates/new": typeof MainTemplatesNewRoute;
   "/groups": typeof MainGroupsIndexRoute;
   "/servers": typeof MainServersIndexRoute;
   "/templates": typeof MainTemplatesIndexRoute;
+  "/groups/$groupId/activity": typeof MainGroupsGroupIdActivityRoute;
+  "/servers/$serverId/activity": typeof MainServersServerIdActivityRoute;
   "/servers/$serverId/players": typeof MainServersServerIdPlayersRoute;
+  "/groups/$groupId/": typeof MainGroupsGroupIdIndexRoute;
   "/servers/$serverId/": typeof MainServersServerIdIndexRoute;
   "/servers/$serverId/files/edit": typeof MainServersServerIdFilesEditRoute;
   "/servers/$serverId/files/new": typeof MainServersServerIdFilesNewRoute;
@@ -190,15 +220,18 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   "/login": typeof AuthLoginRoute;
   "/activity": typeof MainActivityRoute;
+  "/admin/audit-logs": typeof AdminAuditLogsRoute;
   "/": typeof MainIndexRoute;
   "/admin": typeof AdminIndexRoute;
-  "/groups/$groupId": typeof MainGroupsGroupIdRoute;
   "/templates/edit": typeof MainTemplatesEditRoute;
   "/templates/new": typeof MainTemplatesNewRoute;
   "/groups": typeof MainGroupsIndexRoute;
   "/servers": typeof MainServersIndexRoute;
   "/templates": typeof MainTemplatesIndexRoute;
+  "/groups/$groupId/activity": typeof MainGroupsGroupIdActivityRoute;
+  "/servers/$serverId/activity": typeof MainServersServerIdActivityRoute;
   "/servers/$serverId/players": typeof MainServersServerIdPlayersRoute;
+  "/groups/$groupId": typeof MainGroupsGroupIdIndexRoute;
   "/servers/$serverId": typeof MainServersServerIdIndexRoute;
   "/servers/$serverId/files/edit": typeof MainServersServerIdFilesEditRoute;
   "/servers/$serverId/files/new": typeof MainServersServerIdFilesNewRoute;
@@ -211,16 +244,20 @@ export interface FileRoutesById {
   "/admin": typeof AdminRouteWithChildren;
   "/_auth/login": typeof AuthLoginRoute;
   "/_main/activity": typeof MainActivityRoute;
+  "/admin/audit-logs": typeof AdminAuditLogsRoute;
   "/_main/": typeof MainIndexRoute;
   "/admin/": typeof AdminIndexRoute;
-  "/_main/groups/$groupId": typeof MainGroupsGroupIdRoute;
+  "/_main/groups/$groupId": typeof MainGroupsGroupIdRouteWithChildren;
   "/_main/servers/$serverId": typeof MainServersServerIdRouteWithChildren;
   "/_main/templates/edit": typeof MainTemplatesEditRoute;
   "/_main/templates/new": typeof MainTemplatesNewRoute;
   "/_main/groups/": typeof MainGroupsIndexRoute;
   "/_main/servers/": typeof MainServersIndexRoute;
   "/_main/templates/": typeof MainTemplatesIndexRoute;
+  "/_main/groups/$groupId/activity": typeof MainGroupsGroupIdActivityRoute;
+  "/_main/servers/$serverId/activity": typeof MainServersServerIdActivityRoute;
   "/_main/servers/$serverId/players": typeof MainServersServerIdPlayersRoute;
+  "/_main/groups/$groupId/": typeof MainGroupsGroupIdIndexRoute;
   "/_main/servers/$serverId/": typeof MainServersServerIdIndexRoute;
   "/_main/servers/$serverId/files/edit": typeof MainServersServerIdFilesEditRoute;
   "/_main/servers/$serverId/files/new": typeof MainServersServerIdFilesNewRoute;
@@ -232,6 +269,7 @@ export interface FileRouteTypes {
     | "/admin"
     | "/login"
     | "/activity"
+    | "/admin/audit-logs"
     | "/"
     | "/admin/"
     | "/groups/$groupId"
@@ -241,7 +279,10 @@ export interface FileRouteTypes {
     | "/groups"
     | "/servers"
     | "/templates"
+    | "/groups/$groupId/activity"
+    | "/servers/$serverId/activity"
     | "/servers/$serverId/players"
+    | "/groups/$groupId/"
     | "/servers/$serverId/"
     | "/servers/$serverId/files/edit"
     | "/servers/$serverId/files/new"
@@ -250,15 +291,18 @@ export interface FileRouteTypes {
   to:
     | "/login"
     | "/activity"
+    | "/admin/audit-logs"
     | "/"
     | "/admin"
-    | "/groups/$groupId"
     | "/templates/edit"
     | "/templates/new"
     | "/groups"
     | "/servers"
     | "/templates"
+    | "/groups/$groupId/activity"
+    | "/servers/$serverId/activity"
     | "/servers/$serverId/players"
+    | "/groups/$groupId"
     | "/servers/$serverId"
     | "/servers/$serverId/files/edit"
     | "/servers/$serverId/files/new"
@@ -270,6 +314,7 @@ export interface FileRouteTypes {
     | "/admin"
     | "/_auth/login"
     | "/_main/activity"
+    | "/admin/audit-logs"
     | "/_main/"
     | "/admin/"
     | "/_main/groups/$groupId"
@@ -279,7 +324,10 @@ export interface FileRouteTypes {
     | "/_main/groups/"
     | "/_main/servers/"
     | "/_main/templates/"
+    | "/_main/groups/$groupId/activity"
+    | "/_main/servers/$serverId/activity"
     | "/_main/servers/$serverId/players"
+    | "/_main/groups/$groupId/"
     | "/_main/servers/$serverId/"
     | "/_main/servers/$serverId/files/edit"
     | "/_main/servers/$serverId/files/new"
@@ -389,6 +437,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof MainIndexRouteImport;
       parentRoute: typeof MainRoute;
     };
+    "/admin/audit-logs": {
+      id: "/admin/audit-logs";
+      path: "/audit-logs";
+      fullPath: "/admin/audit-logs";
+      preLoaderRoute: typeof AdminAuditLogsRouteImport;
+      parentRoute: typeof AdminRoute;
+    };
     "/_main/activity": {
       id: "/_main/activity";
       path: "/activity";
@@ -459,12 +514,33 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof MainServersServerIdIndexRouteImport;
       parentRoute: typeof MainServersServerIdRoute;
     };
+    "/_main/groups/$groupId/": {
+      id: "/_main/groups/$groupId/";
+      path: "/";
+      fullPath: "/groups/$groupId/";
+      preLoaderRoute: typeof MainGroupsGroupIdIndexRouteImport;
+      parentRoute: typeof MainGroupsGroupIdRoute;
+    };
     "/_main/servers/$serverId/players": {
       id: "/_main/servers/$serverId/players";
       path: "/players";
       fullPath: "/servers/$serverId/players";
       preLoaderRoute: typeof MainServersServerIdPlayersRouteImport;
       parentRoute: typeof MainServersServerIdRoute;
+    };
+    "/_main/servers/$serverId/activity": {
+      id: "/_main/servers/$serverId/activity";
+      path: "/activity";
+      fullPath: "/servers/$serverId/activity";
+      preLoaderRoute: typeof MainServersServerIdActivityRouteImport;
+      parentRoute: typeof MainServersServerIdRoute;
+    };
+    "/_main/groups/$groupId/activity": {
+      id: "/_main/groups/$groupId/activity";
+      path: "/activity";
+      fullPath: "/groups/$groupId/activity";
+      preLoaderRoute: typeof MainGroupsGroupIdActivityRouteImport;
+      parentRoute: typeof MainGroupsGroupIdRoute;
     };
     "/_main/servers/$serverId/files/": {
       id: "/_main/servers/$serverId/files/";
@@ -546,7 +622,21 @@ const AuthRouteChildren: AuthRouteChildren = {
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren);
 
+interface MainGroupsGroupIdRouteChildren {
+  MainGroupsGroupIdActivityRoute: typeof MainGroupsGroupIdActivityRoute;
+  MainGroupsGroupIdIndexRoute: typeof MainGroupsGroupIdIndexRoute;
+}
+
+const MainGroupsGroupIdRouteChildren: MainGroupsGroupIdRouteChildren = {
+  MainGroupsGroupIdActivityRoute: MainGroupsGroupIdActivityRoute,
+  MainGroupsGroupIdIndexRoute: MainGroupsGroupIdIndexRoute,
+};
+
+const MainGroupsGroupIdRouteWithChildren =
+  MainGroupsGroupIdRoute._addFileChildren(MainGroupsGroupIdRouteChildren);
+
 interface MainServersServerIdRouteChildren {
+  MainServersServerIdActivityRoute: typeof MainServersServerIdActivityRoute;
   MainServersServerIdPlayersRoute: typeof MainServersServerIdPlayersRoute;
   MainServersServerIdIndexRoute: typeof MainServersServerIdIndexRoute;
   MainServersServerIdFilesEditRoute: typeof MainServersServerIdFilesEditRoute;
@@ -555,6 +645,7 @@ interface MainServersServerIdRouteChildren {
 }
 
 const MainServersServerIdRouteChildren: MainServersServerIdRouteChildren = {
+  MainServersServerIdActivityRoute: MainServersServerIdActivityRoute,
   MainServersServerIdPlayersRoute: MainServersServerIdPlayersRoute,
   MainServersServerIdIndexRoute: MainServersServerIdIndexRoute,
   MainServersServerIdFilesEditRoute: MainServersServerIdFilesEditRoute,
@@ -568,7 +659,7 @@ const MainServersServerIdRouteWithChildren =
 interface MainRouteChildren {
   MainActivityRoute: typeof MainActivityRoute;
   MainIndexRoute: typeof MainIndexRoute;
-  MainGroupsGroupIdRoute: typeof MainGroupsGroupIdRoute;
+  MainGroupsGroupIdRoute: typeof MainGroupsGroupIdRouteWithChildren;
   MainServersServerIdRoute: typeof MainServersServerIdRouteWithChildren;
   MainTemplatesEditRoute: typeof MainTemplatesEditRoute;
   MainTemplatesNewRoute: typeof MainTemplatesNewRoute;
@@ -580,7 +671,7 @@ interface MainRouteChildren {
 const MainRouteChildren: MainRouteChildren = {
   MainActivityRoute: MainActivityRoute,
   MainIndexRoute: MainIndexRoute,
-  MainGroupsGroupIdRoute: MainGroupsGroupIdRoute,
+  MainGroupsGroupIdRoute: MainGroupsGroupIdRouteWithChildren,
   MainServersServerIdRoute: MainServersServerIdRouteWithChildren,
   MainTemplatesEditRoute: MainTemplatesEditRoute,
   MainTemplatesNewRoute: MainTemplatesNewRoute,
@@ -592,10 +683,12 @@ const MainRouteChildren: MainRouteChildren = {
 const MainRouteWithChildren = MainRoute._addFileChildren(MainRouteChildren);
 
 interface AdminRouteChildren {
+  AdminAuditLogsRoute: typeof AdminAuditLogsRoute;
   AdminIndexRoute: typeof AdminIndexRoute;
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAuditLogsRoute: AdminAuditLogsRoute,
   AdminIndexRoute: AdminIndexRoute,
 };
 
