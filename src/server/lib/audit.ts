@@ -37,6 +37,10 @@ const RESTORABLE_ACTIONS: Record<string, boolean> = {
 };
 
 export class AuditService {
+  private static isUUID(str: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
+  }
   private static async getCurrentUser() {
     const request = getWebRequest();
     const session = await auth.api.getSession({
@@ -199,10 +203,11 @@ export class AuditService {
 
       switch (auditLog.action) {
         case "deleteServerFile":
-          // Note: resourceId now contains serverName:filePath, but Atlas API needs serverId
-          // We need to find the serverId from the server name for the API call
-          const serverNameForDelete = auditLog.resourceId.split(":")[0];
-          const serverIdForDelete = await this.getServerIdFromName(serverNameForDelete);
+          // resourceId contains either serverName:filePath or serverId:filePath
+          const serverIdentifierForDelete = auditLog.resourceId.split(":")[0];
+          const serverIdForDelete = this.isUUID(serverIdentifierForDelete) 
+            ? serverIdentifierForDelete 
+            : await this.getServerIdFromName(serverIdentifierForDelete);
           await atlas.writeServerFileContents(
             serverIdForDelete,
             backupData.filePath,
@@ -218,9 +223,11 @@ export class AuditService {
           break;
 
         case "writeServerFileContents":
-          // Note: resourceId now contains serverName:filePath, but Atlas API needs serverId
-          const serverNameForWrite = auditLog.resourceId.split(":")[0];
-          const serverIdForWrite = await this.getServerIdFromName(serverNameForWrite);
+          // resourceId contains either serverName:filePath or serverId:filePath
+          const serverIdentifierForWrite = auditLog.resourceId.split(":")[0];
+          const serverIdForWrite = this.isUUID(serverIdentifierForWrite) 
+            ? serverIdentifierForWrite 
+            : await this.getServerIdFromName(serverIdentifierForWrite);
           await atlas.writeServerFileContents(
             serverIdForWrite,
             auditLog.resourceId.split(":")[1], // filePath
@@ -237,8 +244,10 @@ export class AuditService {
 
         case "renameServerFile":
           const details = JSON.parse(auditLog.details);
-          const serverNameForRename = auditLog.resourceId.split(":")[0];
-          const serverIdForRename = await this.getServerIdFromName(serverNameForRename);
+          const serverIdentifierForRename = auditLog.resourceId.split(":")[0];
+          const serverIdForRename = this.isUUID(serverIdentifierForRename) 
+            ? serverIdentifierForRename 
+            : await this.getServerIdFromName(serverIdentifierForRename);
           await atlas.renameServerFile(
             serverIdForRename,
             {
