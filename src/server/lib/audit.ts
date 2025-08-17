@@ -128,7 +128,7 @@ export class AuditService {
     try {
       if (action === "writeServerFileContents") {
         const content = await atlas.getServerFileContents(serverId, filePath);
-        return { originalContent: content };
+        return { originalContent: content, filePath };
       } else if (action === "deleteServerFile") {
         const content = await atlas.getServerFileContents(serverId, filePath);
         return { originalContent: content, filePath };
@@ -148,7 +148,7 @@ export class AuditService {
     try {
       if (action === "writeTemplateFileContents") {
         const content = await atlas.getTemplateFileContents(filePath);
-        return { originalContent: content };
+        return { originalContent: content, filePath };
       } else if (action === "deleteTemplateFile") {
         const content = await atlas.getTemplateFileContents(filePath);
         return { originalContent: content, filePath };
@@ -228,26 +228,35 @@ export class AuditService {
           const serverIdForWrite = this.isUUID(serverIdentifierForWrite) 
             ? serverIdentifierForWrite 
             : await this.getServerIdFromName(serverIdentifierForWrite);
+          
+          // Get file path from backup data (new format) or resourceId (old format)
+          const filePathForRestore = backupData.filePath || auditLog.resourceId.split(":")[1];
+          if (!filePathForRestore) {
+            throw new Error("File path not found in backup data or resourceId");
+          }
+          
           await atlas.writeServerFileContents(
             serverIdForWrite,
-            auditLog.resourceId.split(":")[1], // filePath
+            filePathForRestore,
             backupData.originalContent
           );
           break;
 
         case "writeTemplateFileContents":
+          // Get file path from backup data (new format) or resourceId (old format)
+          const templateFilePathForRestore = backupData.filePath || auditLog.resourceId;
           await atlas.writeTemplateFileContents(
-            auditLog.resourceId,
+            templateFilePathForRestore,
             backupData.originalContent
           );
           break;
 
         case "renameServerFile":
           const details = JSON.parse(auditLog.details);
-          const serverIdentifierForRename = auditLog.resourceId.split(":")[0];
-          const serverIdForRename = this.isUUID(serverIdentifierForRename) 
-            ? serverIdentifierForRename 
-            : await this.getServerIdFromName(serverIdentifierForRename);
+          // For rename operations, resourceId is just the server ID/name
+          const serverIdForRename = this.isUUID(auditLog.resourceId) 
+            ? auditLog.resourceId 
+            : await this.getServerIdFromName(auditLog.resourceId);
           await atlas.renameServerFile(
             serverIdForRename,
             {

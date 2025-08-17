@@ -793,9 +793,8 @@ const writeTemplateFileContents = os
       throw new ORPCError("UNAUTHORIZED", { message: "Unauthorized" });
     }
 
-    const backupData = await AuditService.captureFileBackup(
+    const backupData = await AuditService.captureTemplateFileBackup(
       "writeTemplateFileContents",
-      "templates",
       input.file
     );
 
@@ -838,9 +837,8 @@ const deleteTemplateFile = os
       throw new ORPCError("UNAUTHORIZED", { message: "Unauthorized" });
     }
 
-    const backupData = await AuditService.captureFileBackup(
+    const backupData = await AuditService.captureTemplateFileBackup(
       "deleteTemplateFile",
-      "templates",
       input.file
     );
 
