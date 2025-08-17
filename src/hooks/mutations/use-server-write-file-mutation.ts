@@ -12,10 +12,17 @@ export const useServerWriteFileMutation = (
 
   return useMutation(
     orpc.atlas.writeServerFileContents.mutationOptions({
-      onSuccess: () => {
+      onSuccess: (_data, variables) => {
         toast.success("File saved successfully");
 
-        queryClient.invalidateQueries();
+        // Update the cache directly with the new content
+        const queryKey = orpc.atlas.getServerFileContents.queryOptions({
+          input: {
+            server: serverId,
+            file: filePath,
+          },
+        }).queryKey;
+        queryClient.setQueryData(queryKey, variables.content);
 
         onSuccess?.();
       },

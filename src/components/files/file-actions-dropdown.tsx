@@ -1,5 +1,5 @@
-import React, { useCallback } from "react";
-import { MoreVertical } from "lucide-react";
+import React, { useCallback, useState } from "react";
+import { MoreVertical, History } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { useServerDownloadFileMutation } from "@/hooks/mutations/use-server-down
 import { useTemplateDownloadFileMutation } from "@/hooks/mutations/use-template-download-file-mutation";
 import { isFileEditableByNameAndType } from "@/lib/utils";
 import { FileItem } from "@/server/lib/atlas-api/atlas-api.schemas";
+import { FileHistoryDialog } from "./file-history-dialog";
 
 interface FileActionsDropdownProps {
   file: FileItem;
@@ -39,6 +40,7 @@ export const FileActionsDropdown = React.memo(({
   onZipFolder,
   isTemplate = false,
 }: FileActionsDropdownProps) => {
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const serverDownloadFileMutation = useServerDownloadFileMutation();
   const templateDownloadFileMutation = useTemplateDownloadFileMutation();
 
@@ -73,13 +75,14 @@ export const FileActionsDropdown = React.memo(({
   }, [currentPath, isTemplate, templateDownloadFileMutation, serverDownloadFileMutation, serverId]);
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-          <MoreVertical className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
         {file.file && isFileEditableByNameAndType(file.name, file.mimeType) && (
           <DropdownMenuItem
             onClick={(e) => {
@@ -145,6 +148,16 @@ export const FileActionsDropdown = React.memo(({
           Move
         </DropdownMenuItem>
 
+        <DropdownMenuItem
+          onClick={(e) => {
+            e.stopPropagation();
+            setHistoryDialogOpen(true);
+          }}
+        >
+          <History className="h-4 w-4 mr-2" />
+          History
+        </DropdownMenuItem>
+
         {file.name !== ".." && (
           <DropdownMenuItem
             className="text-destructive"
@@ -156,8 +169,21 @@ export const FileActionsDropdown = React.memo(({
             Delete
           </DropdownMenuItem>
         )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      
+      <FileHistoryDialog
+        open={historyDialogOpen}
+        onOpenChange={setHistoryDialogOpen}
+        resourceType="file"
+        resourceId={isTemplate 
+          ? (currentPath === "/" ? `/${file.name}` : `${currentPath}/${file.name}`)
+          : `${serverId}:${currentPath === "/" ? `/${file.name}` : `${currentPath}/${file.name}`}`
+        }
+        serverId={serverId}
+        isTemplate={isTemplate}
+      />
+    </>
   );
 });
 

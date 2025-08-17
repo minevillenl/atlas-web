@@ -2,6 +2,7 @@ import { createServerFileRoute } from "@tanstack/react-start/server";
 
 import atlas from "@/server/lib/atlas-api/atlas-api.client";
 import { auth } from "@/server/lib/auth";
+import { AuditService } from "@/server/lib/audit";
 
 export const ServerRoute = createServerFileRoute("/api/template-upload").methods({
   POST: async ({ request }) => {
@@ -46,6 +47,16 @@ export const ServerRoute = createServerFileRoute("/api/template-upload").methods
       }
 
       const result = await response.json();
+
+      // Log successful template upload
+      await AuditService.logAction({
+        action: "uploadTemplateFile",
+        resourceType: "file",
+        resourceId: path,
+        details: { path },
+        restorePossible: false,
+        success: true,
+      });
       
       return new Response(JSON.stringify(result), {
         status: 200,
@@ -55,6 +66,18 @@ export const ServerRoute = createServerFileRoute("/api/template-upload").methods
       });
     } catch (error) {
       console.error("Template upload error:", error);
+
+      // Log failed template upload
+      await AuditService.logAction({
+        action: "uploadTemplateFile",
+        resourceType: "file",
+        resourceId: path,
+        details: { path },
+        restorePossible: false,
+        success: false,
+        errorMessage: error instanceof Error ? error.message : "Template upload failed",
+      });
+
       return new Response(
         error instanceof Error ? error.message : "Template upload failed",
         { status: 500 }

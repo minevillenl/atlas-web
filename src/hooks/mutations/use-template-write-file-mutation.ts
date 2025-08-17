@@ -11,10 +11,16 @@ export const useTemplateWriteFileMutation = (
 
   return useMutation(
     orpc.atlas.writeTemplateFileContents.mutationOptions({
-      onSuccess: () => {
+      onSuccess: (_data, variables) => {
         toast.success("Template file saved successfully");
 
-        queryClient.invalidateQueries();
+        // Update the cache directly with the new content
+        const queryKey = orpc.atlas.getTemplateFileContents.queryOptions({
+          input: {
+            file: filePath,
+          },
+        }).queryKey;
+        queryClient.setQueryData(queryKey, variables.content);
 
         onSuccess?.();
       },

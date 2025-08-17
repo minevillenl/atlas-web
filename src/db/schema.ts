@@ -49,3 +49,23 @@ export const verifications = pgTable("atlas_verifications", {
   createdAt: timestamp("created_at"),
   updatedAt: timestamp("updated_at"),
 });
+
+export const auditLogs = pgTable("atlas_audit_logs", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  action: text("action").notNull(),
+  resourceType: text("resource_type").notNull(),
+  resourceId: text("resource_id").notNull(),
+  details: text("details").notNull(),
+  backupData: text("backup_data"),
+  restorePossible: boolean("restore_possible").notNull().default(false),
+  restoredAt: timestamp("restored_at"),
+  restoredBy: text("restored_by").references(() => users.id),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  timestamp: timestamp("timestamp").notNull(),
+  success: boolean("success").notNull(),
+  errorMessage: text("error_message"),
+});
